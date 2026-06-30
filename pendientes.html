@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tickets por Asignar - SEDIF</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #00ad9f; --bg: #f4f7f6; --danger: #e74c3c; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h2 { color: var(--primary); border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background: #f8f9fa; text-align: left; padding: 12px; font-size: 0.85em; color: #777; border-bottom: 2px solid #ddd; }
+        td { padding: 15px 12px; border-bottom: 1px solid #eee; font-size: 0.9em; vertical-align: top; }
+        
+        .contact-info { font-size: 0.8em; color: #555; margin-top: 4px; display: block; }
+        .dept-tag { background: #eef2f3; color: #34495e; padding: 3px 6px; border-radius: 4px; font-size: 0.8em; display: inline-block; margin-top: 4px; border: 1px solid #ccc; }
+        
+        /* BOTONES */
+        .btn-asignar { background: var(--accent); color: white; text-decoration: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; font-size: 0.85em; display: inline-block; transition: 0.3s; white-space: nowrap; }
+        .btn-cancelar { background: white; color: var(--danger); border: 2px solid var(--danger); text-decoration: none; padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 0.85em; display: inline-block; margin-top: 5px; transition: 0.3s; cursor: pointer; }
+        .btn-asignar:hover { opacity: 0.9; transform: translateY(-2px); }
+        .btn-cancelar:hover { background: var(--danger); color: white; }
+        
+        #loader-global { display: none; text-align: center; padding: 15px; font-weight: bold; color: var(--danger); background: #fff5f5; border-radius: 10px; margin-bottom: 15px; }
+
+        @media screen and (max-width: 768px) {
+            table, thead, tbody, th, td, tr { display: block; }
+            thead tr { position: absolute; top: -9999px; left: -9999px; }
+            tr { border: 1px solid #eee; margin-bottom: 15px; border-radius: 10px; padding: 10px; }
+            td { border: none; position: relative; padding-left: 45% !important; text-align: right; }
+            td:before { position: absolute; left: 10px; width: 40%; padding-right: 10px; white-space: nowrap; content: attr(data-label); font-weight: bold; text-align: left; color: var(--primary); }
+            td:last-child { text-align: center; padding-left: 10px !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="admin-back-btn" style="display: none; text-align: left; margin-bottom: 20px;">
+            <a href="admin.html" style="background: #2c3e50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 0.9em; border-left: 4px solid #e67e22;">
+                ← Volver al Panel de Administrador
+            </a>
+        </div>
+
+        <h2>Tickets Pendientes de Asignación</h2>
+        <div id="loader-global">Procesando cancelación... ⏳</div>
+
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Folio / Fecha</th>
+                        <th>Datos del Usuario</th>
+                        <th>Ubicación / Área</th>
+                        <th>Problema Reportado</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-body">
+                    <tr><td colspan="5" style="text-align:center; padding: 30px;">Cargando tickets...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        if (localStorage.getItem('userRole') === 'admin') {
+            document.getElementById('admin-back-btn').style.display = 'block';
+        } else {
+            window.location.href = "index.html"; 
+        }
+
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec';
+
+async function cargar() {
+            try {
+                const res = await fetch(`${scriptURL}?nombre=SIN_ASIGNAR&t=${new Date().getTime()}`);
+                const data = await res.json();
+                const body = document.getElementById('tabla-body');
+                body.innerHTML = "";
+
+                // --- AQUÍ ESTÁ LA MAGIA CORREGIDA ---
+                // Si data es un arreglo (formato viejo), lo usa. Si es objeto (formato nuevo con ibreves), saca solo los tickets.
+                const ticketsArray = Array.isArray(data) ? data : (data.tickets || []);
+
+                const ticketsReales = ticketsArray.filter(t => (t.ID || t.id) && (t.ID !== "empty" && t.id !== "empty"));
+
+                ticketsReales.sort((a, b) => {
+                    const idA = parseInt((a.ID || a.id || '0').toString().replace(/\D/g, '')) || 0;
+                    const idB = parseInt((b.ID || b.id || '0').toString().replace(/\D/g, '')) || 0;
+                    return idB - idA;
+                });
+
+                if (ticketsReales.length === 0) {
+                    body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px; color: green; font-size: 1.1em; font-weight: bold;">🎉 ¡Excelente! No hay tickets pendientes.</td></tr>';
+                    return;
+                }
+
+                ticketsReales.forEach(t => {
+                    const ticketID = t.ID || t.id || 'N/A';
+                    const user = t.Usuario || t.usuario || 'Sin nombre';
+                    const prob = t.Problema || t.problema || '';
+                    const loc = t.ubicacion || t.Ubicacion || 'No especificada';
+                    const depto = t.departamento || t.Departamento || 'No especificado';
+                    const correo = t.correo || t.Correo || 'Sin correo';
+                    const telefono = t.telefono || t.Telefono || 'Sin teléfono';
+
+                    body.innerHTML += `
+                        <tr>
+                            <td data-label="Folio"><b>#${ticketID}</b></td>
+                            <td data-label="Usuario">
+                                <strong>${user}</strong><br>
+                                <span class="contact-info">📧 ${correo}</span>
+                                <span class="contact-info">📞 ${telefono}</span>
+                            </td>
+                            <td data-label="Área">
+                                <strong>📍 ${loc}</strong><br>
+                                <span class="dept-tag">${depto}</span>
+                            </td>
+                            <td data-label="Problema" style="max-width: 300px; text-align: justify;">${prob}</td>
+                            <td data-label="Acción">
+                                <a href="asignar.html?id=${ticketID}&user=${encodeURIComponent(user)}&loc=${encodeURIComponent(loc)}&prob=${encodeURIComponent(prob)}" class="btn-asignar">ASIGNAR</a>
+                                <button onclick="cancelarRapido('${ticketID}', '${user.replace(/'/g, "\\'")}')" class="btn-cancelar">CANCELAR</button>
+                            </td>
+                        </tr>`;
+                });
+            } catch (e) {
+                console.error(e);
+                document.getElementById('tabla-body').innerHTML = '<tr><td colspan="5" style="text-align:center; color:red; padding: 20px;">Error de conexión.</td></tr>';
+            }
+        }
+
+        async function cancelarRapido(id, usuario) {
+            const motivo = prompt(`¿Motivo para cancelar el ticket #${id} de ${usuario}?`);
+            if (motivo === null) return;
+            if (motivo.trim() === "") { alert("El motivo es obligatorio para cancelar."); return; }
+
+            if (!confirm(`¿Confirmas la cancelación definitiva del ticket #${id}?`)) return;
+
+            document.getElementById('loader-global').style.display = "block";
+            
+            try {
+                await fetch(scriptURL, {
+                    method: 'POST', mode: 'no-cors',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        accion: "reasignar_ticket",
+                        ticket: id,
+                        idNuevo: "CANCELAR",
+                        comentarios: motivo,
+                        usuario: usuario,
+                        tecnicoAnterior: "SIN_ASIGNAR"
+                    })
+                });
+
+                alert("Ticket cancelado y enviado a históricos.");
+                cargar();
+            } catch (e) {
+                alert("Error al procesar la cancelación.");
+            } finally {
+                document.getElementById('loader-global').style.display = "none";
+            }
+        }
+
+        cargar();
+    </script>
+</body>
+</html>
+ 
