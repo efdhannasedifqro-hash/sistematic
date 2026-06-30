@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centro de Tickets TIC - Historial</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #00ad9f; --bg: #f4f7f6; --warning: #e67e22; --danger: #e74c3c; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h2 { color: var(--primary); border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-top: 0; font-size: 1.4em; }
+        
+        /* PESTAÑAS (TABS) */
+        .tabs { display: flex; gap: 10px; border-bottom: 3px solid #eee; margin-bottom: 20px; }
+        .tab { padding: 12px 20px; cursor: pointer; font-weight: bold; color: #7f8c8d; background: #f8f9fa; border-radius: 10px 10px 0 0; transition: 0.3s; font-size: 0.9em; }
+        .tab:hover { background: #eef2f3; color: var(--primary); }
+        .tab.active { background: var(--primary); color: white; border-bottom: 3px solid var(--accent); margin-bottom: -3px; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        @media screen and (max-width: 600px) {
+            table, thead, tbody, th, td, tr { display: block; }
+            thead tr { position: absolute; top: -9999px; left: -9999px; }
+            tr { border: 1px solid #eee; margin-bottom: 15px; border-radius: 10px; padding: 10px; background: #fdfdfd; }
+            td { border: none; position: relative; padding-left: 50% !important; text-align: right; font-size: 0.95em; border-bottom: 1px solid #f9f9f9; }
+            td:before { position: absolute; left: 10px; width: 45%; padding-right: 10px; white-space: nowrap; content: attr(data-label); font-weight: bold; text-align: left; color: var(--primary); }
+            td:last-child { border-bottom: none; text-align: center; padding-left: 10px !important; }
+            .btn-resolver { width: 100%; box-sizing: border-box; margin-top: 10px; }
+            .tabs { flex-direction: column; gap: 5px; border-bottom: none; }
+            .tab.active { margin-bottom: 0; }
+        }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #f8f9fa; color: #777; text-align: left; padding: 12px; font-size: 0.85em; text-transform: uppercase; }
+        td { padding: 15px; border-bottom: 1px solid #eee; color: #444; }
+        
+        .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 0.8em; font-weight: bold; display: inline-block; }
+        .status-pendiente { background: #fff4e6; color: #fd7e14; }
+        .status-concluido { background: #e6fcf5; color: #099268; }
+        
+        .btn-resolver { color: white; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-size: 0.9em; font-weight: bold; display: inline-block; transition: 0.3s; text-align: center; }
+        .btn-active { background: var(--accent); }
+        .btn-view { background: #95a5a6; }
+        .back-btn { background: #2c3e50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 0.9em; border-left: 4px solid #e67e22; display: inline-block; margin-bottom: 20px; }
+
+        /* ESTILO TARJETAS PARA IBREVES */
+        .express-card { background: #fdfdfd; border-left: 5px solid #8e44ad; padding: 18px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 3px 6px rgba(0,0,0,0.05); }
+        .express-header { display: flex; justify-content: space-between; font-weight: bold; color: var(--primary); margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 8px;}
+        .express-body { color: #444; font-size: 0.95em; line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <div id="dynamic-back-btn" style="display: none; text-align: left;">
+            <a id="back-link" href="#" class="back-btn">← Volver</a>
+        </div>
+
+        <h2 id="saludo">Cargando Centro de Tickets...</h2>
+
+        <div class="tabs">
+            <div class="tab active" onclick="cambiarTab('tab-normales')" id="btn-tab-normales">Tickets Normales (<span id="count-normales">0</span>)</div>
+            <div class="tab" onclick="cambiarTab('tab-express')" style="border-top: 3px solid #8e44ad;" id="btn-tab-express">Incidencias Express (<span id="count-express">0</span>)</div>
+        </div>
+
+        <div id="tab-normales" class="tab-content active">
+            <div id="tabla-contenedor">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID Ticket</th>
+                            <th>Usuario</th>
+                            <th>Problema</th>
+                            <th>Estado</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-body">
+                        <tr><td colspan="5" style="text-align:center; padding: 30px;">Cargando tickets... ⏳</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="tab-express" class="tab-content">
+            <div id="contenedor-express">
+                <div style="text-align:center; padding: 30px;">Cargando incidencias express... ⏳</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Lógica de Pestañas
+        function cambiarTab(idTab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(idTab).classList.add('active');
+            
+            if(idTab === 'tab-express') {
+                event.target.style.borderBottom = "3px solid #8e44ad";
+                document.getElementById('btn-tab-normales').style.borderBottom = "none";
+            } else {
+                event.target.style.borderBottom = "3px solid var(--accent)";
+                document.getElementById('btn-tab-express').style.borderBottom = "none";
+            }
+        }
+
+        // --- LÓGICA DEL BOTÓN DE REGRESO BASADO EN ROLES ---
+        const userRole = localStorage.getItem('userRole');
+        const backBtnDiv = document.getElementById('dynamic-back-btn');
+        const backLink = document.getElementById('back-link');
+
+        if (userRole === 'admin') {
+            backBtnDiv.style.display = 'block';
+            backLink.href = 'admin.html';
+            backLink.innerText = '← Volver al Panel de Administrador';
+        } else if (userRole === 'tecnico') {
+            backBtnDiv.style.display = 'block';
+            backLink.href = 'tecnico.html';
+            backLink.innerText = '← Volver a Mi Área de Trabajo';
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const tecnicoNombre = urlParams.get('nombre');
+        
+        // URL DE TU APPS SCRIPT
+        const webhookURL = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec'; 
+        
+        if (tecnicoNombre) {
+            document.getElementById('saludo').innerText = "Tickets de: " + decodeURIComponent(tecnicoNombre);
+            cargarTickets();
+        } else {
+            document.getElementById('saludo').innerText = "Acceso no válido: Falta nombre del técnico.";
+        }
+
+        async function cargarTickets() {
+            try {
+                // LA URL CORRECTA PARA HISTORIAL
+                const response = await fetch(`${webhookURL}?nombre=${encodeURIComponent(tecnicoNombre)}&t=${new Date().getTime()}`);
+                const data = await response.json();
+                
+                const ticketsValidos = Array.isArray(data) ? data.filter(t => t.ID || t.id) : (data.tickets || []);
+                const ibrevesArray = data.ibreves || [];
+
+                // 1. RENDERIZAR TICKETS NORMALES (CON TU LÓGICA DE ORDENAMIENTO Y ACCIONES)
+                document.getElementById('count-normales').innerText = ticketsValidos.length;
+                const tableBody = document.getElementById('tabla-body');
+                tableBody.innerHTML = "";
+
+                if (ticketsValidos.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:gray;">No se encontraron tickets asignados a este equipo.</td></tr>';
+                } else {
+                    // LÓGICA DE ORDENAMIENTO (Pendientes Arriba)
+                    ticketsValidos.sort((a, b) => {
+                        const getStatus = (t) => (t.Estado || t.estado || 'Pendiente').toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        const terminados = ["concluido", "revision", "evaluado", "finalizado", "resuelto", "cancelado"];
+                        
+                        const isConcluidoA = terminados.includes(getStatus(a));
+                        const isConcluidoB = terminados.includes(getStatus(b));
+
+                        if (isConcluidoA && !isConcluidoB) return 1;
+                        if (!isConcluidoA && isConcluidoB) return -1;
+
+                        const idA = parseInt((a.ID || a.id || '0').toString().replace(/\D/g, '')) || 0;
+                        const idB = parseInt((b.ID || b.id || '0').toString().replace(/\D/g, '')) || 0;
+                        return idB - idA;
+                    });
+
+                    ticketsValidos.forEach(t => {
+                        const tid = t.ID || t.id || 'S/N';
+                        const tuser = t.Usuario || t.usuario || 'No disponible';
+                        const tprob = t.Problema || t.problema || 'Sin descripción';
+                        const test = (t.Estado || t.estado || 'Pendiente').toString();
+                        const tmod = t.modalidad || t.Modalidad || 'Presencial'; 
+
+                        const statusLimpio = test.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        const terminados = ["concluido", "revision", "evaluado", "finalizado", "resuelto", "cancelado"];
+                        const esConcluido = terminados.includes(statusLimpio);
+                        const editable = !esConcluido;
+                        
+                        tableBody.innerHTML += `
+                            <tr>
+                                <td data-label="ID Ticket"><b>#${tid}</b></td>
+                                <td data-label="Usuario"><strong>${tuser}</strong><br><span style="font-size:0.85em; color:#777;">${t.departamento || t.ubicacion}</span></td>
+                                <td data-label="Problema">${tprob}</td>
+                                <td data-label="Estado">
+                                    <span class="status-badge ${editable ? 'status-pendiente' : 'status-concluido'}">${test}</span>
+                                </td>
+                                <td>
+                                    <a href="reporte.html?id=${tid}&user=${encodeURIComponent(tuser)}&status=${encodeURIComponent(test)}&nombre=${encodeURIComponent(tecnicoNombre)}&mod=${encodeURIComponent(tmod)}" 
+                                       class="btn-resolver ${editable ? 'btn-active' : 'btn-view'}">
+                                        ${editable ? 'Resolver' : 'Ver Detalle'}
+                                    </a>
+                                </td>
+                            </tr>`;
+                    });
+                }
+
+                // 2. RENDERIZAR IBREVES (EN FORMATO TARJETAS)
+                document.getElementById('count-express').innerText = ibrevesArray.length;
+                const contenedorExpress = document.getElementById('contenedor-express');
+                contenedorExpress.innerHTML = "";
+
+                if (ibrevesArray.length === 0) {
+                    contenedorExpress.innerHTML = '<div style="text-align:center; padding: 20px; color:#777; font-weight:bold;">No hay incidencias express registradas para este colaborador.</div>';
+                } else {
+                    // Ordenar IBREVES
+                    ibrevesArray.sort((a,b) => parseInt((b.ID||"0").replace(/\D/g,'')) - parseInt((a.ID||"0").replace(/\D/g,'')));
+                    
+                    ibrevesArray.forEach(ib => {
+                        contenedorExpress.innerHTML += `
+                            <div class="express-card">
+                                <div class="express-header">
+                                    <span>🎟️ #${ib.ID} &nbsp;|&nbsp; 📅 ${ib.Fecha}</span>
+                                    <span>📍 ${ib.Area}</span>
+                                </div>
+                                <div class="express-body">
+                                    <p style="margin: 0 0 8px 0;">👤 <b>Usuario Solicitante:</b> ${ib.Usuario}</p>
+                                    <p style="margin: 0 0 8px 0; color: #c0392b;">🚨 <b>Problema:</b> ${ib.Problema}</p>
+                                    <p style="margin: 0; color: #27ae60;">✅ <b>Solución Aplicada:</b> ${ib.Apoyo}</p>
+                                </div>
+                            </div>`;
+                    });
+                }
+
+            } catch (e) {
+                console.error("Error:", e);
+                document.getElementById('saludo').innerText = "Error de conexión con el servidor.";
+            }
+        }
+    </script>
+</body>
+</html>
