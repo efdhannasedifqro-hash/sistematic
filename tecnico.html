@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Técnico - SEDIF</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #00ad9f; --bg: #f4f7f6; --ecala: #8e44ad; --warning: #e67e22; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; margin: 0; }
+        .container { max-width: 1000px; margin: 20px auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h2 { color: var(--primary); border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-top: 0; text-align: center; }
+        .welcome { color: #7f8c8d; font-size: 1.1em; margin-bottom: 20px; font-weight: bold; text-align: center; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; margin-bottom: 30px; }
+        .btn { display: block; background: var(--primary); color: white; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; transition: 0.3s; font-size: 0.85em; text-align: center; }
+        .btn:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .btn-express { background: var(--ecala); font-size: 1em; padding: 15px; margin-bottom: 30px; border: 2px solid #9b59b6; }
+        
+        .section-title { color: var(--primary); border-left: 4px solid var(--accent); padding-left: 10px; font-size: 1.1em; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9em; }
+        th { background: #f8f9fa; color: #777; text-align: left; padding: 12px; font-size: 0.85em; text-transform: uppercase; border-bottom: 2px solid #eee; }
+        td { padding: 15px 12px; border-bottom: 1px solid #eee; color: #444; }
+        .badge-bandeja { background: #eef2f3; color: #34495e; padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: bold; border: 1px solid #dcdde1; display: inline-block; margin-top: 4px; }
+        .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; display: inline-block; background: #fff4e6; color: #fd7e14; }
+        .btn-resolver { background: var(--accent); color: white; text-decoration: none; padding: 8px 15px; border-radius: 8px; font-size: 0.85em; font-weight: bold; display: inline-block; transition: 0.3s; text-align: center; }
+        
+        .footer-controls { display: flex; justify-content: space-between; margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px; }
+        .btn-logout { background: none; border: none; color: #e74c3c; cursor: pointer; font-weight: bold; text-decoration: underline; font-size: 0.9em; }
+        .btn-pass { background: none; border: none; color: #3498db; cursor: pointer; font-weight: bold; text-decoration: underline; font-size: 0.9em; }
+
+        /* Estilos del Modal de Contraseña */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 350px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
+        .modal-content h3 { margin-top: 0; color: var(--primary); }
+        .modal-content input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .modal-btns { display: flex; justify-content: flex-end; gap: 10px; }
+        .btn-save { background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-cancel { background: #ccc; color: #333; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+
+        @media screen and (max-width: 600px) {
+            table, thead, tbody, th, td, tr { display: block; }
+            thead tr { position: absolute; top: -9999px; left: -9999px; }
+            tr { border: 1px solid #eee; margin-bottom: 15px; border-radius: 10px; padding: 10px; background: #fdfdfd; }
+            td { border: none; position: relative; padding-left: 50% !important; text-align: right; }
+            td:before { position: absolute; left: 10px; width: 45%; padding-right: 10px; white-space: nowrap; content: attr(data-label); font-weight: bold; text-align: left; color: var(--primary); }
+            td:last-child { text-align: center; padding-left: 10px !important; }
+            .btn-resolver { width: 100%; box-sizing: border-box; margin-top: 10px; }
+            .footer-controls { flex-direction: column; gap: 15px; align-items: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Mi Área de Trabajo TIC</h2>
+        <div class="welcome" id="saludo">Hola, Técnico</div>
+
+        <a href="ibreves.html" class="btn btn-express" style="text-align: center;">📝 Registrar Nueva Incidencia Express</a>
+        
+        <h3 class="section-title">🔥 Mis Tickets Activos (Global)</h3>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead><tr><th>Ticket</th><th>Bandeja</th><th>Problema</th><th>Estado</th><th>Acción</th></tr></thead>
+                <tbody id="global-tickets-body">
+                    <tr><td colspan="5" style="text-align:center; padding: 20px;">Cargando tickets...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <br><br>
+        <h3 class="section-title">📁 Consultar Historiales Completos</h3>
+        <div class="grid" id="botones-historial"></div>
+
+        <div class="footer-controls">
+            <button onclick="abrirModalPass()" class="btn-pass">🔑 Cambiar mi contraseña</button>
+            <button onclick="logout()" class="btn-logout">Cerrar Sesión</button>
+        </div>
+    </div>
+
+    <div class="modal" id="modalPass">
+        <div class="modal-content">
+            <h3>Cambiar Contraseña</h3>
+            <input type="password" id="passActual" placeholder="Contraseña Actual" required>
+            <input type="password" id="passNueva" placeholder="Nueva Contraseña" required>
+            <p id="msg-pass" style="color:red; font-size:0.85em; display:none;"></p>
+            <div class="modal-btns">
+                <button class="btn-cancel" onclick="cerrarModalPass()">Cancelar</button>
+                <button class="btn-save" id="btnSavePass" onclick="guardarPassword()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if(localStorage.getItem('userRole') !== 'tecnico') { window.location.href = "index.html"; }
+
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec';
+
+        const dictNombres = {
+            1: "Mtr. Gabriel Terrazas", 2: "Lic. Miguel Chavez", 3: "Lic. Eduardo Perez",
+            4: "Lic. Martin Alejandro Reyes Bocanegra", 5: "Fati", 6: "Mtr. Gabriel - Lic. Eduardo",
+            7: "Mtr. Gabriel - Lic. Miguel", 8: "Lic. Miguel - Lic. Eduardo", 9: "Lic. Eduardo - Lic. Alejandro",
+            10: "Lic. Miguel - Lic. Alejandro", 11: "Mtr. Gabriel - Lic. Alejandro", 12: "Lic. Luis Carlos",
+            13: "Lic. Luis Carlos - Lic. Alejandro", 14: "Lic. Luis Carlos - Lic. Eduardo",
+            15: "Lic. Luis Carlos - Lic. Miguel", 16: "Lic. Luis Carlos - Mtr. Gabriel"
+        };
+
+        document.getElementById('saludo').innerText = "Hola, " + localStorage.getItem('userName');
+        const accesos = JSON.parse(localStorage.getItem('userAccesos') || "[]");
+        const userLoginCorto = localStorage.getItem('userLogin');
+
+        const contenedorBotones = document.getElementById('botones-historial');
+        if (accesos.length === 0) {
+            contenedorBotones.innerHTML = "<p>No tienes bandejas asignadas.</p>";
+        } else {
+            accesos.forEach(idMenu => {
+                const nombreHistorial = dictNombres[idMenu];
+                if(nombreHistorial) {
+                    const btn = document.createElement('a');
+                    btn.href = `historial.html?nombre=${encodeURIComponent(nombreHistorial)}`;
+                    btn.className = 'btn';
+                    btn.innerHTML = `📋 ${nombreHistorial}`;
+                    contenedorBotones.appendChild(btn);
+                }
+            });
+        }
+
+        async function cargarGlobales() {
+            const tableBody = document.getElementById('global-tickets-body');
+            if (accesos.length === 0) { tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No tienes bandejas.</td></tr>'; return; }
+
+            try {
+                const nombresAFiltrar = accesos.map(id => dictNombres[id]).filter(Boolean);
+                const fetchPromises = nombresAFiltrar.map(nombre => 
+                    fetch(`${scriptURL}?nombre=${encodeURIComponent(nombre)}&t=${new Date().getTime()}`).then(res => res.json())
+                );
+                
+                const resultados = await Promise.all(fetchPromises);
+                let todosLosTickets = [];
+                
+                // --- PARCHE MÁGICO ---
+                resultados.forEach((respuesta, index) => {
+                    // Extraemos solo la lista de tickets, ignorando los ibreves
+                    const arrTickets = Array.isArray(respuesta) ? respuesta : (respuesta.tickets || []);
+                    arrTickets.forEach(t => { t.bandejaPertenece = nombresAFiltrar[index]; todosLosTickets.push(t); });
+                });
+
+                const terminados = ["concluido", "revision", "evaluado", "finalizado", "resuelto"];
+                let ticketsActivos = todosLosTickets.filter(t => {
+                    if (!t.ID && !t.id) return false;
+                    const est = (t.Estado || t.estado || '').toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    return !terminados.includes(est);
+                });
+
+                ticketsActivos.sort((a, b) => parseInt((b.ID||b.id||'0').toString().replace(/\D/g,'')) - parseInt((a.ID||a.id||'0').toString().replace(/\D/g,'')));
+
+                if(ticketsActivos.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px; color:green; font-weight:bold;">🎉 ¡Excelente! No tienes tickets pendientes en ninguna de tus bandejas.</td></tr>';
+                    return;
+                }
+
+                tableBody.innerHTML = "";
+                ticketsActivos.forEach(t => {
+                    const tid = t.ID || t.id; const tuser = t.Usuario || t.usuario || 'N/A'; const tprob = t.Problema || t.problema || '';
+                    const test = t.Estado || t.estado || 'Pendiente'; const tmod = t.modalidad || t.Modalidad || 'Presencial';
+                    const linkReporte = `reporte.html?id=${tid}&user=${encodeURIComponent(tuser)}&status=${encodeURIComponent(test)}&nombre=${encodeURIComponent(t.bandejaPertenece)}&mod=${encodeURIComponent(tmod)}`;
+
+                    tableBody.innerHTML += `<tr>
+                        <td data-label="Ticket"><b>#${tid}</b><br><span style="font-size:0.8em; color:#777;">${tuser}</span></td>
+                        <td data-label="Bandeja"><span class="badge-bandeja">${t.bandejaPertenece}</span></td>
+                        <td data-label="Problema">${tprob}</td>
+                        <td data-label="Estado"><span class="status-badge">${test}</span></td>
+                        <td data-label="Acción"><a href="${linkReporte}" class="btn-resolver">Resolver</a></td>
+                    </tr>`;
+                });
+            } catch (e) { 
+                console.error(e);
+                // Si hay un pequeño error de red, no borramos la tabla, solo esperamos al siguiente ciclo
+            }
+        }
+        
+        // Cargar al inicio
+        cargarGlobales();
+
+        // RECARGA AUTOMÁTICA CADA 5 MINUTOS (300,000 ms)
+        setInterval(cargarGlobales, 60000);
+
+        // --- LÓGICA DEL MODAL DE CONTRASEÑA ---
+        function abrirModalPass() { document.getElementById('modalPass').style.display = 'flex'; }
+        function cerrarModalPass() { 
+            document.getElementById('modalPass').style.display = 'none'; 
+            document.getElementById('msg-pass').style.display = 'none';
+            document.getElementById('passActual').value = '';
+            document.getElementById('passNueva').value = '';
+        }
+
+        async function guardarPassword() {
+            const pActual = document.getElementById('passActual').value;
+            const pNueva = document.getElementById('passNueva').value;
+            const msg = document.getElementById('msg-pass');
+            const btn = document.getElementById('btnSavePass');
+
+            if(!pActual || !pNueva) { msg.innerText = "Llena ambos campos"; msg.style.display = 'block'; return; }
+
+            btn.disabled = true; btn.innerText = "Guardando..."; msg.style.display = 'none';
+
+            try {
+                const response = await fetch(scriptURL, { 
+                    method: 'POST', mode: 'no-cors',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ accion: "cambiar_password", usuario: userLoginCorto, passActual: pActual, passNueva: pNueva })
+                });
+
+                alert("Orden de cambio enviada. Si tu contraseña actual era correcta, el cambio se aplicó en la base de datos.");
+                cerrarModalPass();
+            } catch (e) {
+                msg.innerText = "Error de conexión."; msg.style.display = 'block';
+            }
+            btn.disabled = false; btn.innerText = "Guardar";
+        }
+
+        function logout() { if(confirm("¿Deseas cerrar tu sesión?")) { localStorage.clear(); window.location.href = "index.html"; } }
+    </script>
+</body>
+</html>
