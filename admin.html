@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - SEDIF</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --primary: #2c3e50; --accent: #00ad9f; --bg: #f4f7f6; --warning: #e67e22; --danger: #e74c3c; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; margin: 0; }
+        .container { max-width: 1300px; margin: 20px auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        
+        .header-top { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px;}
+        h2 { color: var(--primary); margin: 0; display: flex; align-items: center; gap: 15px;}
+        .month-selector { padding: 8px; border-radius: 8px; border: 2px solid var(--accent); font-weight: bold; color: var(--primary); outline: none; cursor: pointer;}
+
+        /* DASHBOARD KPIs (7 TARJETAS) */
+        .kpi-container { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; justify-content: space-between; }
+        .kpi-card { flex: 1; min-width: 120px; padding: 15px; border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.15); transition: transform 0.3s;}
+        .kpi-card.clickable { cursor: pointer; border: 2px solid transparent; }
+        .kpi-card.clickable:hover { transform: translateY(-4px) scale(1.02); border: 2px solid #fff; box-shadow: 0 8px 15px rgba(0,0,0,0.2); }
+        
+        .kpi-card h3 { margin: 0; font-size: 2.2em; }
+        .kpi-card p { margin: 5px 0 0 0; font-weight: bold; font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px;}
+        
+        .bg-red { background: linear-gradient(135deg, #ff6b6b, #e74c3c); }
+        .bg-blue { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .bg-purple { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+        .bg-green { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+        .bg-dark { background: linear-gradient(135deg, #34495e, #2c3e50); }
+        .bg-gold { background: linear-gradient(135deg, #f1c40f, #f39c12); color: #fff;} 
+        .bg-crimson { background: linear-gradient(135deg, #c0392b, #8e44ad); } 
+
+        /* GRÁFICOS Y TABLA */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 40px; }
+        .chart-box { background: #fdfdfd; padding: 20px; border-radius: 12px; border: 1px solid #eee; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .monitor-container { grid-column: 1 / -1; background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 15px; overflow-y: auto; max-height: 400px;}
+        canvas { max-height: 250px; width: 100%; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+        th { background: #f8f9fa; padding: 10px; text-align: left; color: #666; position: sticky; top: 0; z-index: 1;}
+        td { padding: 10px; border-bottom: 1px solid #eee; }
+        .btn-action { color: white; padding: 6px 10px; border-radius: 6px; text-decoration: none; font-size: 0.8em; font-weight: bold; display: inline-block; text-align: center; margin: 2px;}
+        .btn-re { background: var(--warning); }
+        .btn-val { background: #9b59b6; }
+        .btn-asig { background: var(--accent); }
+
+        /* BOTONES DE SECCIONES */
+        .section-title { margin-top: 10px; color: #7f8c8d; font-size: 0.9em; text-transform: uppercase; font-weight: bold; border-left: 4px solid var(--accent); padding-left: 10px; margin-bottom: 15px;}
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .btn { display: block; background: var(--primary); color: white; padding: 15px; border-radius: 12px; text-decoration: none; font-weight: bold; text-align: center; transition: 0.3s; font-size: 0.85em; }
+        .btn-main { background: var(--warning); border: 2px solid #d35400; } 
+        .btn-accent { background: var(--accent); }
+        .btn-ecala { background: #8e44ad; } 
+        .btn:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .logout-container { margin-top: 40px; text-align: center; border-top: 1px solid #eee; padding-top: 20px;}
+        .btn-logout { background: none; border: none; color: var(--danger); cursor: pointer; font-weight: bold; text-decoration: underline; font-size: 1em;}
+
+        /* TROFEOS DE PRODUCTIVIDAD PONDERADA */
+        .trophy-box { width: 100%; background: #fff4e6; border-left: 4px solid #f39c12; padding: 10px; margin-top: 15px; border-radius: 6px; font-size: 0.85em; color: #333;}
+        .trophy-box div { margin-bottom: 5px; }
+        .score-tag { background: #f39c12; color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.9em; margin-left: 5px;}
+
+        /* MODAL UNIVERSAL PARA LISTAS DE TICKETS */
+        .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(3px); }
+        .modal-content { background-color: #fff; margin: 5% auto; padding: 25px; border-radius: 12px; width: 95%; max-width: 800px; max-height: 85vh; overflow-y: auto; box-shadow: 0 5px 30px rgba(0,0,0,0.3); }
+        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close:hover { color: #333; }
+        .tag-dias { background: #e74c3c; color: white; padding: 3px 8px; border-radius: 10px; font-weight: bold; font-size: 0.9em; white-space: nowrap;}
+        #modal-title { margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid #eee; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-top">
+            <h2><span>Cuarto de Mando TIC</span><span style="font-size: 0.5em; color: #7f8c8d; font-weight: normal;">Hola, Jefe Gabo</span></h2>
+            <select id="mes-filtro" class="month-selector" onchange="cargarDashboard()">
+                <option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option><option value="3">Abril</option>
+                <option value="4">Mayo</option><option value="5">Junio</option><option value="6">Julio</option><option value="7">Agosto</option>
+                <option value="8">Septiembre</option><option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
+            </select>
+        </div>
+
+        <div class="kpi-container" id="kpi-zone">
+            <div class="kpi-card bg-gold clickable" onclick="abrirModal('Nuevos Hoy', listasGlobales.nuevos, '#f39c12')"><h3 id="kpi-hoy">--</h3><p>Nuevos Hoy 👆</p></div>
+            <div class="kpi-card bg-red clickable" onclick="abrirModal('Sin Asignar', listasGlobales.pendientes, '#e74c3c', 'asignar')"><h3 id="kpi-pendientes">--</h3><p>Sin Asignar 👆</p></div>
+            <div class="kpi-card bg-blue clickable" onclick="abrirModal('En Proceso', listasGlobales.atendiendo, '#3498db', 'reasignar')"><h3 id="kpi-atendiendo">--</h3><p>En Proceso 👆</p></div>
+            <div class="kpi-card bg-crimson clickable" onclick="abrirModal('Rezagados (+3D)', listasGlobales.rezagados, '#c0392b', 'reasignar')"><h3 id="kpi-rezagados">--</h3><p>Rezagados (+3D) 👆</p></div>
+            <div class="kpi-card bg-purple clickable" onclick="abrirModal('Por Validar', listasGlobales.revision, '#9b59b6', 'validar')"><h3 id="kpi-revision">--</h3><p>Por Validar 👆</p></div>
+            <div class="kpi-card bg-green"><h3 id="kpi-concluidos">--</h3><p>Concluidos</p></div>
+            <div class="kpi-card bg-dark"><h3 id="kpi-ibreves">--</h3><p>Total Express</p></div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="chart-box"><h4 style="margin-top:0; color:var(--primary); text-align:center;">Carga Activa (En Proceso)</h4><canvas id="miGrafico"></canvas></div>
+            
+            <div class="chart-box">
+                <h4 style="margin-top:0; color:var(--primary); text-align:center;">Productividad Ponderada del Mes</h4>
+                <canvas id="graficoProductividad"></canvas>
+                <div class="trophy-box">
+                    <div style="font-size: 0.8em; margin-bottom: 8px; color: #e67e22; text-align: center;"><i>(Ticket Normal = 2 Pts | IBREVE = 1 Pt)</i></div>
+                    <div>👑 <b>Líder Individual:</b> <span id="lider-indiv" style="color:var(--accent);">Cargando...</span></div>
+                    <div>🤝 <b>Mejor Equipo:</b> <span id="lider-pareja" style="color:var(--accent);">Cargando...</span></div>
+                </div>
+            </div>
+
+            <div class="chart-box"><h4 style="margin-top:0; color:var(--primary); text-align:center;">Top 5 Áreas Demandantes</h4><canvas id="graficoAreas"></canvas></div>
+            <div class="chart-box"><h4 style="margin-top:0; color:var(--primary); text-align:center;">Salud de la Mesa</h4><canvas id="graficoEstados"></canvas></div>
+            
+            <div class="monitor-container">
+                <h4 style="margin-top:0; color:var(--primary);">Radar de Tickets Asignados</h4>
+                <table>
+                    <thead><tr><th>Ticket</th><th>Colaborador/Equipo</th><th>Usuario</th><th>Acción</th></tr></thead>
+                    <tbody id="monitor-body"><tr><td colspan="4" style="text-align:center;">Cargando datos...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section-title">Operación Diaria</div>
+        <div class="grid">
+            <a href="pendientes.html" class="btn btn-main">📩 Pendientes de Asignación</a>
+            <a href="ibreves.html" class="btn btn-ecala">📝 Registrar Incidencia Express</a>
+            <a href="https://docs.google.com/spreadsheets/d/1I1cTeHiKZ3y2AFmNpZoh1QLQQRX-mwv6PQlxpfXD-nA/edit" target="_blank" class="btn" style="background: #34495e; border: 2px solid #2c3e50;">📖 Auditar Bitácora Express</a>
+            <a href="validacion.html" class="btn" style="background: #9b59b6; border: 2px solid #8e44ad;">✅ Tickets por Validar</a>
+            <a href="https://docs.google.com/spreadsheets/d/1I1cTeHiKZ3y2AFmNpZoh1QLQQRX-mwv6PQlxpfXD-nA/edit?gid=0#gid=0" target="_blank" class="btn btn-accent">📊 Base de Datos Completa</a>
+        </div>
+        
+        <div class="section-title">Bandejas Individuales</div>
+        <div class="grid">
+            <a href="historial.html?nombre=Mtr. Gabriel Terrazas" class="btn">📋 Gabriel Terrazas</a>
+            <a href="historial.html?nombre=Lic. Miguel Chavez" class="btn">📋 Miguel Chavez</a>
+            <a href="historial.html?nombre=Lic. Eduardo Perez" class="btn">📋 Eduardo Perez</a>
+            <a href="historial.html?nombre=Lic. Martin Alejandro Reyes Bocanegra" class="btn">📋 Alejandro Reyes</a>
+            <a href="historial.html?nombre=Fati" class="btn">📋 Fati</a>
+            <a href="historial.html?nombre=Lic. Luis Carlos" class="btn">📋 Luis Carlos</a>
+        </div>
+
+        <div class="section-title">Bandejas de Equipos y Parejas</div>
+        <div class="grid">
+            <a href="historial.html?nombre=Mtr. Gabriel - Lic. Eduardo" class="btn">👥 Gabriel - Eduardo</a>
+            <a href="historial.html?nombre=Mtr. Gabriel - Lic. Miguel" class="btn">👥 Gabriel - Miguel</a>
+            <a href="historial.html?nombre=Lic. Miguel - Lic. Eduardo" class="btn">👥 Miguel - Eduardo</a>
+            <a href="historial.html?nombre=Lic. Eduardo - Lic. Alejandro" class="btn">👥 Eduardo - Alejandro</a>
+            <a href="historial.html?nombre=Lic. Miguel - Lic. Alejandro" class="btn">👥 Miguel - Alejandro</a>
+            <a href="historial.html?nombre=Mtr. Gabriel - Lic. Alejandro" class="btn">👥 Gabriel - Alejandro</a>
+            <a href="historial.html?nombre=Lic. Luis Carlos - Lic. Alejandro" class="btn">👥 Luis Carlos - Alejandro</a>
+            <a href="historial.html?nombre=Lic. Luis Carlos - Lic. Eduardo" class="btn">👥 Luis Carlos - Eduardo</a>
+            <a href="historial.html?nombre=Lic. Luis Carlos - Lic. Miguel" class="btn">👥 Luis Carlos - Miguel</a>
+            <a href="historial.html?nombre=Lic. Luis Carlos - Mtr. Gabriel" class="btn">👥 Luis C - Gabriel</a>
+        </div>
+
+        <div class="logout-container">
+            <button onclick="logout()" class="btn-logout">Cerrar Sesión de Administrador</button>
+        </div>
+    </div>
+
+    <div id="modalUniversal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarModal()">&times;</span>
+            <h3 id="modal-title">Título del Modal</h3>
+            <table>
+                <thead><tr><th>Ticket</th><th>Usuario</th><th>Asignado a</th><th>Días</th><th>Acción</th></tr></thead>
+                <tbody id="modal-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        if(localStorage.getItem('userRole') !== 'admin') { window.location.href = "index.html"; }
+        function logout() { if(confirm("¿Estás seguro de salir del panel?")) { localStorage.clear(); window.location.href = "index.html"; } }
+
+        const hoy = new Date();
+        document.getElementById('mes-filtro').value = hoy.getMonth();
+
+        const diccionarioTecnicos = {
+            "1": "Gabriel Terrazas", "2": "Miguel Chavez", "3": "Eduardo Perez", "4": "Alejandro Reyes", "5": "Fati", "12": "Luis Carlos",
+            "6": "Gabriel - Eduardo", "7": "Gabriel - Miguel", "8": "Miguel - Eduardo", "9": "Eduardo - Alejandro", "10": "Miguel - Alejandro", "11": "Gabriel - Alejandro",
+            "13": "Luis C - Alejandro", "14": "Luis C - Eduardo", "15": "Luis C - Miguel", "16": "Luis C - Gabriel"
+        };
+
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec';
+
+        let miGrafico, graficoProd, graficoAreas, graficoEstados;
+        let listasGlobales = { nuevos: [], pendientes: [], atendiendo: [], rezagados: [], revision: [] };
+
+        async function cargarDashboard() {
+            try {
+                const mesSeleccionado = document.getElementById('mes-filtro').value;
+                const res = await fetch(`${scriptURL}?accion=dashboard&mes=${mesSeleccionado}&anio=${hoy.getFullYear()}&t=${new Date().getTime()}`);
+                const data = await res.json();
+                
+                // LLENAR KPIs
+                document.getElementById('kpi-hoy').innerText = data.nuevosHoy || 0;
+                document.getElementById('kpi-pendientes').innerText = data.pendientes || 0;
+                document.getElementById('kpi-atendiendo').innerText = data.atendiendo || 0;
+                document.getElementById('kpi-rezagados').innerText = data.rezagados || 0;
+                document.getElementById('kpi-revision').innerText = data.revision || 0;
+                document.getElementById('kpi-concluidos').innerText = data.concluidos || 0;
+                document.getElementById('kpi-ibreves').innerText = data.totalIbreves || 0;
+
+                // GUARDAR LISTAS PARA MODALES
+                listasGlobales.nuevos = data.listaNuevos || [];
+                listasGlobales.pendientes = data.listaPendientes || [];
+                listasGlobales.atendiendo = data.listaAtendiendo || [];
+                listasGlobales.rezagados = data.listaRezagados || [];
+                listasGlobales.revision = data.listaRevision || [];
+
+                // RADAR
+                const body = document.getElementById('monitor-body');
+                body.innerHTML = "";
+                if (!data.activos || data.activos.length === 0) {
+                    body.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:green; font-weight:bold;'>🎉 No hay carga activa asignada.</td></tr>";
+                } else {
+                    let htmlTabla = "";
+                    data.activos.forEach(t => {
+                        const nombreLimpio = diccionarioTecnicos[t.tecnico] || t.tecnico;
+                        htmlTabla += `<tr><td><b>#${t.id}</b></td><td style="color:#2980b9; font-weight:bold;">${nombreLimpio}</td><td>${t.usuario}</td><td><a href="reasignar.html?id=${t.id}&nombreActual=${encodeURIComponent(t.tecnico)}&user=${encodeURIComponent(t.usuario)}&prob=${encodeURIComponent(t.problema)}" class="btn-action btn-re">Reasignar</a></td></tr>`;
+                    });
+                    body.innerHTML = htmlTabla;
+                }
+
+                // GRÁFICO 2: PRODUCTIVIDAD PONDERADA (CANTIDADES APILADAS + CORONAS)
+                const ctxProd = document.getElementById('graficoProductividad').getContext('2d');
+                let labelsProd = []; let dTickets = []; let dIbreves = [];
+                
+                let mejorIndividual = { nombre: "Nadie", puntos: 0, text: "" };
+                let mejorPareja = { nombre: "Ninguna", puntos: 0, text: "" };
+
+                if (data.prodIndividual) {
+                    let arrayIndiv = Object.entries(data.prodIndividual).sort((a, b) => b[1].totalPuntos - a[1].totalPuntos);
+                    if(arrayIndiv.length > 0) {
+                        mejorIndividual.nombre = arrayIndiv[0][0];
+                        mejorIndividual.text = `<span class="score-tag">${arrayIndiv[0][1].totalPuntos} Pts</span> (${arrayIndiv[0][1].tickets} Normales, ${arrayIndiv[0][1].ibreves} Express)`;
+                    }
+                    arrayIndiv.forEach(item => {
+                        labelsProd.push(item[0]); 
+                        dTickets.push(item[1].tickets); // Graficamos las cantidades verdes
+                        dIbreves.push(item[1].ibreves); // Graficamos las cantidades moradas
+                    });
+                }
+
+                if (data.prodParejas) {
+                    let arrayParejas = Object.entries(data.prodParejas).sort((a, b) => b[1].totalPuntos - a[1].totalPuntos);
+                    if(arrayParejas.length > 0) {
+                        mejorPareja.nombre = arrayParejas[0][0];
+                        mejorPareja.text = `<span class="score-tag">${arrayParejas[0][1].totalPuntos} Pts</span> (${arrayParejas[0][1].tickets} tickets en conjunto)`;
+                    }
+                }
+
+                document.getElementById('lider-indiv').innerHTML = mejorIndividual.nombre !== "Nadie" ? `${mejorIndividual.nombre} - ${mejorIndividual.text}` : "Aún no hay datos";
+                document.getElementById('lider-pareja').innerHTML = mejorPareja.nombre !== "Ninguna" ? `${mejorPareja.nombre} - ${mejorPareja.text}` : "Aún no hay datos";
+
+                if(graficoProd) graficoProd.destroy();
+                graficoProd = new Chart(ctxProd, {
+                    type: 'bar',
+                    data: { 
+                        labels: labelsProd, 
+                        datasets: [
+                            { label: 'Tickets Normales', data: dTickets, backgroundColor: '#2ecc71', borderRadius: 3 },
+                            { label: 'IBREVES (Express)', data: dIbreves, backgroundColor: '#8e44ad', borderRadius: 3 }
+                        ] 
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { x: {stacked: true}, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: true, position: 'bottom' } } }
+                });
+
+                // GRÁFICO 3 Y 4...
+                const ctxAreas = document.getElementById('graficoAreas').getContext('2d');
+                let arrayAreas = Object.entries(data.areasDemandantes || {}).sort((a, b) => b[1] - a[1]).slice(0, 5);
+                if(graficoAreas) graficoAreas.destroy();
+                graficoAreas = new Chart(ctxAreas, {
+                    type: 'doughnut', data: { labels: arrayAreas.map(i=>i[0]), datasets: [{ data: arrayAreas.map(i=>i[1]), backgroundColor: ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6'], borderWidth: 0 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: {size: 9} } } } }
+                });
+
+                const ctxEstados = document.getElementById('graficoEstados').getContext('2d');
+                if(graficoEstados) graficoEstados.destroy();
+                graficoEstados = new Chart(ctxEstados, {
+                    type: 'pie', data: { labels: ['Sin Asignar', 'En Proceso', 'Por Validar', 'Concluidos'], datasets: [{ data: [data.pendientes||0, data.atendiendo||0, data.revision||0, data.concluidos||0], backgroundColor: ['#e74c3c', '#3498db', '#9b59b6', '#2ecc71'], borderWidth: 0 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: {size: 10} } } } }
+                });
+
+            } catch (e) { console.error("Error Dashboard:", e); }
+        }
+        
+        // FUNCIÓN MODAL UNIVERSAL
+        function abrirModal(titulo, listaTickets, colorBase, accionPrincipal = 'ninguna') {
+            document.getElementById('modal-title').innerHTML = `<span style="color:${colorBase};">■</span> ${titulo}`;
+            const bodyModal = document.getElementById('modal-body');
+            bodyModal.innerHTML = "";
+
+            if (!listaTickets || listaTickets.length === 0) {
+                bodyModal.innerHTML = "<tr><td colspan='5' style='text-align:center;'>No hay tickets en esta categoría.</td></tr>";
+            } else {
+                listaTickets.forEach(r => {
+                    let botonAccion = "---";
+                    if (accionPrincipal === 'asignar') {
+                        botonAccion = `<a href="asignar.html?id=${r.id}&user=${encodeURIComponent(r.usuario)}&loc=${encodeURIComponent(r.loc)}&prob=${encodeURIComponent(r.prob)}" class="btn-action btn-asig">Asignar</a>`;
+                    } else if (accionPrincipal === 'reasignar') {
+                        botonAccion = `<a href="reasignar.html?id=${r.id}&nombreActual=${encodeURIComponent(r.tecnico)}&user=${encodeURIComponent(r.usuario)}&prob=${encodeURIComponent(r.prob)}" class="btn-action btn-re">Reasignar</a>`;
+                    } else if (accionPrincipal === 'validar') {
+                        botonAccion = `<a href="validacion.html" class="btn-action btn-val">Ir a Validar</a>`;
+                    }
+
+                    bodyModal.innerHTML += `<tr><td><b>#${r.id}</b></td><td>${r.usuario}</td><td>${r.tecnico}</td><td><span class="tag-dias">${r.dias} días</span></td><td>${botonAccion}</td></tr>`;
+                });
+            }
+            document.getElementById('modalUniversal').style.display = "block";
+        }
+
+        function cerrarModal() { document.getElementById('modalUniversal').style.display = "none"; }
+        window.onclick = function(e) { if (e.target == document.getElementById('modalUniversal')) cerrarModal(); }
+
+        cargarDashboard();
+        setInterval(cargarDashboard, 60000); 
+    </script>
+</body>
+</html>
