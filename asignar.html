@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asignar Ticket - SEDIF</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #00ad9f; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h2 { color: var(--primary); border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-top: 0; }
+        .info { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; font-size: 0.9em; line-height: 1.6; }
+        label { display: block; font-weight: bold; margin-bottom: 8px; color: var(--primary); margin-top: 15px; }
+        select, textarea, button { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-size: 1em; box-sizing: border-box; font-family: inherit; }
+        .select-decision { border: 2px solid #e67e22; background: #fffcf9; font-weight: bold; }
+        button { background: var(--accent); color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 25px; }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        #msg { display: none; text-align: center; color: #27ae60; font-weight: bold; margin-top: 15px; padding: 10px; border: 1px solid #27ae60; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        
+        <div id="admin-back-btn" style="display: none; text-align: left; margin-bottom: 20px;">
+            <a href="admin.html" style="background: #2c3e50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 0.9em; border-left: 4px solid #e67e22;">
+                ← Volver al Cuarto de Mando
+            </a>
+        </div>
+
+        <h2>Asignar Ticket #<span id="ticket-id"></span></h2>
+        <div class="info">
+            <p><strong>Usuario:</strong> <span id="user-name"></span></p>
+            <p><strong>Ubicación:</strong> <span id="user-loc"></span></p>
+            <p><strong>Problema:</strong> <span id="user-prob" style="font-style:italic; color:#555;"></span></p>
+        </div>
+
+        <label for="modalidad-final">Tipo de Atención (Columna P):</label>
+        <select id="modalidad-final" class="select-decision">
+            <option value="Presencial">📍 Presencial</option>
+            <option value="Remota">💻 Remota</option>
+        </select>
+        
+        <label for="tecnico-select">Asignar a:</label>
+        <select id="tecnico-select">
+            <optgroup label="Individual">
+                <option value="1">Mtr. Gabriel Terrazas</option>
+                <option value="2">Lic. Miguel Chavez</option>
+                <option value="3">Lic. Eduardo Perez</option>
+                <option value="4">Lic. Martin Alejandro Reyes Bocanegra</option>
+                <option value="5">Fati</option>
+                <option value="12">Lic. Luis Carlos</option>
+            </optgroup>
+            <optgroup label="Parejas / Equipos">
+                <option value="6">Mtr. Gabriel - Lic. Eduardo</option>
+                <option value="7">Mtr. Gabriel - Lic. Miguel</option>
+                <option value="8">Lic. Miguel - Lic. Eduardo</option>
+                <option value="9">Lic. Eduardo - Lic. Alejandro</option>
+                <option value="10">Lic. Miguel - Lic. Alejandro</option>
+                <option value="11">Mtr. Gabriel - Lic. Alejandro</option>
+                <option value="13">Lic. Luis Carlos - Lic. Alejandro</option>
+                <option value="14">Lic. Luis Carlos - Lic. Eduardo</option>
+                <option value="15">Lic. Luis Carlos - Lic. Miguel</option>
+                <option value="16">Lic. Luis Carlos - Mtr. Gabriel</option>
+            </optgroup>
+        </select>
+
+        <label for="comentarios">Instrucciones para el técnico:</label>
+        <textarea id="comentarios" placeholder="Ej: Reportarse al llegar o llevar herramienta..."></textarea>
+        
+        <button id="btn-asignar" onclick="asignar()">Confirmar Asignación</button>
+        <p id="msg">Ticket asignado correctamente. Redirigiendo...</p>
+    </div>
+
+    <script>
+        if (localStorage.getItem('userRole') === 'admin') { 
+            document.getElementById('admin-back-btn').style.display = 'block'; 
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const tId = params.get('id');
+        
+        document.getElementById('ticket-id').innerText = tId || '---';
+        document.getElementById('user-name').innerText = decodeURIComponent(params.get('user') || '---');
+        document.getElementById('user-loc').innerText = decodeURIComponent(params.get('loc') || '---');
+        document.getElementById('user-prob').innerText = decodeURIComponent(params.get('prob') || '---');
+
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec';
+
+        async function asignar() {
+            const btn = document.getElementById('btn-asignar');
+            const selectTecnico = document.getElementById('tecnico-select');
+            
+            const nombreCompleto = selectTecnico.options[selectTecnico.selectedIndex].text;
+            const idTecnico = selectTecnico.value;
+            
+            btn.disabled = true;
+            btn.innerText = "Procesando...";
+
+            try {
+                await fetch(scriptURL, { 
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        accion: "AsignarTicket",
+                        ticket: tId,
+                        tecnico: idTecnico,
+                        nombreTecnico: nombreCompleto,
+                        modalidad: document.getElementById('modalidad-final').value,
+                        comentarios: document.getElementById('comentarios').value,
+                        usuario: document.getElementById('user-name').innerText,
+                        ubicacion: document.getElementById('user-loc').innerText,
+                        problema: document.getElementById('user-prob').innerText
+                    })
+                });
+
+                document.getElementById('msg').style.display = "block";
+                
+                // AQUÍ SE HIZO EL CAMBIO DE REDIRECCIÓN A ADMIN.HTML
+                setTimeout(() => { window.location.href = "admin.html"; }, 2000);
+            } catch (e) { 
+                alert("Error de comunicación con el servidor."); 
+                btn.disabled = false;
+                btn.innerText = "Confirmar Asignación";
+            }
+        }
+    </script>
+</body>
+</html>
