@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sistema TIC SEDIF</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #00ad9f; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-box { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 350px; text-align: center; }
+        h2 { color: var(--primary); margin-top: 0; border-bottom: 3px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1em; }
+        input:focus { border-color: var(--accent); outline: none; }
+        button { width: 100%; background: var(--accent); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 1.1em; cursor: pointer; transition: 0.3s; }
+        button:hover { opacity: 0.9; transform: translateY(-2px); }
+        button:disabled { background: #95a5a6; cursor: not-allowed; }
+        #error-msg { color: #e74c3c; font-weight: bold; margin-top: 15px; display: none; font-size: 0.9em; }
+        .logo { font-size: 3em; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="login-box">
+        <div class="logo">🔐</div>
+        <h2>Acceso TIC SEDIF</h2>
+        <form id="loginForm" onsubmit="iniciarSesion(event)">
+            <input type="text" id="user" placeholder="Usuario" required autocomplete="off">
+            <input type="password" id="pass" placeholder="Contraseña" required>
+            <button type="submit" id="btn-login">Ingresar al Sistema</button>
+        </form>
+        <p id="error-msg">Usuario o contraseña incorrectos.</p>
+    </div>
+
+    <script>
+        // Si ya hay sesión iniciada, saltar el login
+        window.onload = function() {
+            const role = localStorage.getItem('userRole');
+            if (role === 'admin') window.location.href = 'admin.html';
+            if (role === 'tecnico') window.location.href = 'tecnico.html';
+        }
+
+        // 👇 Pega aquí la NUEVA URL de tu Apps Script 👇
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec';
+
+        async function iniciarSesion(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-login');
+            const errorMsg = document.getElementById('error-msg');
+            const u = document.getElementById('user').value.toLowerCase().trim();
+            const p = document.getElementById('pass').value.trim();
+
+            btn.disabled = true;
+            btn.innerText = "Verificando...";
+            errorMsg.style.display = 'none';
+
+            try {
+                // Se envía la petición al servidor seguro de Google
+                const res = await fetch(`${scriptURL}?accion=login&u=${encodeURIComponent(u)}&p=${encodeURIComponent(p)}`);
+                const data = await res.json();
+
+                if (data.valid) {
+                    // Guardamos todas las credenciales, incluyendo el usuario corto para poder cambiar la contraseña luego
+                    localStorage.setItem('userLogin', u);
+                    localStorage.setItem('userRole', data.rol);
+                    localStorage.setItem('userName', data.nombre);
+                    localStorage.setItem('userAccesos', JSON.stringify(data.accesos));
+
+                    if (data.rol === 'admin') {
+                        window.location.href = 'admin.html';
+                    } else {
+                        window.location.href = 'tecnico.html';
+                    }
+                } else {
+                    errorMsg.style.display = 'block';
+                    btn.disabled = false;
+                    btn.innerText = "Ingresar al Sistema";
+                }
+            } catch (err) {
+                errorMsg.innerText = "Error de conexión. Intenta de nuevo.";
+                errorMsg.style.display = 'block';
+                btn.disabled = false;
+                btn.innerText = "Ingresar al Sistema";
+            }
+        }
+    </script>
+</body>
+</html>
