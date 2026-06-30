@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Servicio TIC</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #00ad9f; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h2 { color: var(--primary); text-align: center; margin-bottom: 10px; border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
+        .back-link { display: block; text-align: left; margin-bottom: 15px; color: var(--primary); text-decoration: none; font-weight: bold; font-size: 0.9em; }
+        .info-box { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid var(--accent); }
+        .info-label { font-size: 0.8em; color: #777; font-weight: bold; text-transform: uppercase; }
+        .info-value { font-size: 1.1em; color: #333; margin-bottom: 10px; }
+        .modalidad-info { color: #e67e22; font-weight: bold; }
+        label { display: block; font-weight: 600; margin-bottom: 8px; color: #444; }
+        textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-family: inherit; font-size: 1em; box-sizing: border-box; resize: vertical; margin-bottom: 15px; }
+        .btn-send { width: 100%; background: var(--accent); color: white; border: none; padding: 15px; border-radius: 10px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-send:hover { background: #008f83; transform: translateY(-2px); }
+        .read-only-msg { background: #fff4e6; color: #fd7e14; padding: 10px; border-radius: 10px; text-align: center; font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container" id="main-form">
+        <a href="javascript:void(0)" onclick="regresar()" class="back-link">← Regresar al Centro de Tickets</a>
+        <h2>Detalles del Ticket</h2>
+        
+        <div class="info-box">
+            <div class="info-label">Ticket ID:</div>
+            <div id="disp-id" class="info-value">#...</div>
+            <div class="info-label">Usuario:</div>
+            <div id="disp-usuario" class="info-value">...</div>
+            <div class="info-label">Modalidad:</div>
+            <div id="disp-modalidad" class="info-value modalidad-info">...</div>
+            <div class="info-label">Estado Actual:</div>
+            <div id="disp-status" class="info-value">...</div>
+        </div>
+
+        <div id="formulario-contenido">
+            <label>Descripción de la Solución:</label>
+            <textarea id="solucion-texto" rows="5" placeholder="Explica detalladamente qué se realizó..."></textarea>
+            <label>Comentarios adicionales (Opcional):</label>
+            <textarea id="comentarios-tecnico" rows="2" placeholder="Notas internas..."></textarea>
+            <button id="btn-finalizar" class="btn-send" onclick="enviarReporte()">Finalizar y Avisar a Jefe</button>
+        </div>
+        <div id="status-msg" style="text-align:center; margin-top:15px; display:none;"></div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const ticketId = urlParams.get('id') || 'N/A';
+        const nombreUser = decodeURIComponent(urlParams.get('user') || 'Usuario');
+        const estatus = decodeURIComponent(urlParams.get('status') || 'Sin atender');
+        const tecnico = decodeURIComponent(urlParams.get('nombre') || '');
+        const modalidad = decodeURIComponent(urlParams.get('mod') || 'No especificada');
+
+        document.getElementById('disp-id').innerText = ticketId;
+        document.getElementById('disp-usuario').innerText = nombreUser;
+        document.getElementById('disp-status').innerText = estatus;
+        document.getElementById('disp-modalidad').innerText = modalidad;
+
+        if (estatus === "Concluido" || estatus === "Revision") {
+            document.getElementById('btn-finalizar').style.display = 'none';
+            document.getElementById('solucion-texto').disabled = true;
+            document.getElementById('comentarios-tecnico').disabled = true;
+            document.getElementById('solucion-texto').placeholder = "Ticket en revisión o concluido.";
+            const msg = document.createElement('div');
+            msg.className = 'read-only-msg';
+            msg.innerText = "Modo consulta: Reporte enviado.";
+            document.getElementById('formulario-contenido').appendChild(msg);
+        }
+
+        function regresar() { window.location.href = `historial.html?nombre=${encodeURIComponent(tecnico)}`; }
+
+        async function enviarReporte() {
+    const solucion = document.getElementById('solucion-texto').value;
+    const comentarios = document.getElementById('comentarios-tecnico').value;
+    if (!solucion) return alert("Por favor, describe la solución.");
+
+    document.getElementById('status-msg').style.display = "block";
+    document.getElementById('status-msg').innerText = "Enviando reporte y notificando a jefe...";
+
+    // URL de tu Apps Script (la misma que usas para el historial)
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec';
+
+    try {
+        // Usamos mode: 'no-cors' para evitar bloqueos del navegador al enviar el POST
+        await fetch(scriptURL, {
+            method: 'POST',
+            mode: 'no-cors', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+    ticket: ticketId,
+    usuario: nombreUser, // Asegúrate de que esta variable tenga el nombre del usuario
+    solucion: solucion,
+    comentarios_tecnico: comentarios
+})
+        });
+
+        // Como usamos 'no-cors', no podemos leer la respuesta, pero si no hay error asumimos éxito
+        document.getElementById('main-form').innerHTML = `<h2 style="color:var(--accent)">¡Reporte enviado!</h2><p>Se ha notificado al supervisor para su validación.</p><button class="btn-send" onclick="regresar()">Volver al Inicio</button>`;
+    } catch (error) { 
+        console.error(error);
+        alert("Error al enviar el reporte."); 
+    }
+}
+    </script>
+</body>
+</html>
+
+
