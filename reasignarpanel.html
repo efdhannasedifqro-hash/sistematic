@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DEBUG TICKETS</title>
+</head>
+<body>
+    <h1>Depuración de Conexión</h1>
+    <div id="raw-data" style="background: #eee; padding: 10px; border: 1px solid #ccc; margin-bottom: 20px;">
+        Esperando respuesta del servidor...
+    </div>
+    
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Usuario</th>
+                <th>Técnico</th>
+            </tr>
+        </thead>
+        <tbody id="tabla-debug"></tbody>
+    </table>
+
+    <script>
+        async function probarConexion() {
+            const url = 'https://hook.us2.make.com/g2o6bagpnddob1127nhxqpwc7t6sdadx?nombre=MONITOR';
+            try {
+                const res = await fetch(url);
+                const texto = await res.text();
+                
+                // Mostramos el texto crudo para ver qué manda Make exactamente
+                document.getElementById('raw-data').innerText = "RESPUESTA CRUDA: " + texto;
+                
+                const data = JSON.parse(texto);
+                const tabla = document.getElementById('tabla-debug');
+                
+                data.forEach(t => {
+                    tabla.innerHTML += `
+                        <tr>
+                            <td>${t.id || 'N/A'}</td>
+                            <td>${t.usuario || 'N/A'}</td>
+                            <td>${t.tecnico || 'N/A'}</td>
+                        </tr>`;
+                });
+            } catch (e) {
+                document.getElementById('raw-data').innerText = "ERROR: " + e.message;
+            }
+        }
+        probarConexion();
+    </script>
+</body>
+</html>
