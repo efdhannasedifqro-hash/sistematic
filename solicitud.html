@@ -20,6 +20,19 @@
         #loader { display: none; text-align: center; margin-top: 15px; color: var(--primary); font-weight: bold; }
         #success-msg { display: none; text-align: center; margin-top: 20px; }
         .check-icon { font-size: 50px; color: var(--accent); display: block; margin-bottom: 10px; }
+
+        /* Estilos del Aviso de Privacidad */
+        .privacidad-box { background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; font-size: 0.85em; color: #555; margin-bottom: 20px; line-height: 1.4; }
+        .privacidad-box label { display: flex; align-items: flex-start; gap: 10px; font-weight: normal; color: #333; cursor: pointer; margin-bottom: 0; }
+        .privacidad-box input[type="checkbox"] { width: auto; margin-top: 3px; cursor: pointer; }
+        .btn-privacidad-link { background: none; border: none; color: var(--accent); text-decoration: underline; padding: 0; font-size: 1em; cursor: pointer; font-weight: bold; }
+        
+        /* Modal para el aviso completo */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
+        .modal-content h3 { margin-top: 0; color: var(--primary); border-bottom: 2px solid var(--accent); padding-bottom: 8px; }
+        .modal-content p { font-size: 0.9em; color: #444; line-height: 1.5; text-align: justify; }
+        .modal-close { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; float: right; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -94,6 +107,14 @@
             <div class="note">Foto o PDF (Máx 5MB)</div>
         </div>
 
+        <!-- Seccion de Aviso de Privacidad -->
+        <div class="privacidad-box">
+            <label>
+                <input type="checkbox" id="aceptoPrivacidad" required>
+                <span>He leído y acepto el <button type="button" class="btn-privacidad-link" onclick="abrirModalPrivacidad()">Aviso de Privacidad</button> para el tratamiento de mis datos personales en la atención de este ticket.</span>
+            </label>
+        </div>
+
         <button type="submit" class="btn-submit">🚀 Generar Ticket</button>
         <div id="loader">Subiendo ticket y archivos... esto puede tardar unos segundos ⏳</div>
     </form>
@@ -106,9 +127,29 @@
     <button onclick="location.reload()" class="btn-submit" style="margin-top:20px; background:#eee; color:#333;">Levantar otro ticket</button>
 </div>
 
+<!-- Modal del Aviso de Privacidad Completo -->
+<div class="modal" id="modalPrivacidad">
+    <div class="modal-content">
+        <h3>Aviso de Privacidad Simplificado</h3>
+        <p>El Sistema Estatal para el Desarrollo Integral de la Familia del Estado de Querétaro (SEDIF), a través del Departamento de Tecnologías de la Información y Comunicación (TIC), es el responsable del tratamiento de los datos personales que nos proporcione.</p>
+        <p><b>Finalidad del Tratamiento:</b> Sus datos personales (nombre, correo electrónico, teléfono de contacto, ubicación y departamento) serán utilizados exclusivamente para gestionar, canalizar, dar seguimiento y brindar solución a las solicitudes de soporte técnico, incidencias informáticas y mantenimiento requeridas en nuestra Mesa de Ayuda.</p>
+        <p><b>Transferencia de Datos:</b> Se informa que no se realizarán transferencias de datos personales a terceros, salvo aquellas que sean necesarias para atender requerimientos de información de una autoridad competente, debidamente fundados y motivados.</p>
+        <p>Para mayor información acerca del tratamiento y de los derechos ARCO que puede hacer valer, puede solicitar asistencia directamente ante la Unidad de Transparencia del SEDIF Querétaro.</p>
+        <button type="button" class="modal-close" onclick="cerrarModalPrivacidad()">Entendido</button>
+    </div>
+</div>
+
 <script>
     // 👇👇👇 AQUÍ PEGA TU URL DE APPS SCRIPT 👇👇👇
     const scriptURL = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec'; 
+
+    function abrirModalPrivacidad() {
+        document.getElementById('modalPrivacidad').style.display = 'flex';
+    }
+
+    function cerrarModalPrivacidad() {
+        document.getElementById('modalPrivacidad').style.display = 'none';
+    }
 
     async function procesarFormulario(e) {
         e.preventDefault();
@@ -148,6 +189,8 @@
             } catch (err) {
                 console.error("Error archivo", err);
                 alert("Error al leer el archivo.");
+                btn.style.display = 'block';
+                loader.style.display = 'none';
                 return;
             }
         }
@@ -182,6 +225,9 @@
         }
     }
 </script>
+
+</body>
+</html>
 
 </body>
 </html>
