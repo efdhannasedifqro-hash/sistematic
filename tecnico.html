@@ -91,6 +91,19 @@
     </div>
 
     <script>
+        // =========================================================================
+        // Función utilitaria para neutralizar inyección de código XSS en el DOM
+        // =========================================================================
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         if(localStorage.getItem('userRole') !== 'tecnico') { window.location.href = "index.html"; }
 
         const scriptURL = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec';
@@ -104,6 +117,7 @@
             15: "Lic. Luis Carlos - Lic. Miguel", 16: "Lic. Luis Carlos - Mtr. Gabriel"
         };
 
+        // .innerText sanitiza de forma nativa
         document.getElementById('saludo').innerText = "Hola, " + localStorage.getItem('userName');
         const accesos = JSON.parse(localStorage.getItem('userAccesos') || "[]");
         const userLoginCorto = localStorage.getItem('userLogin');
@@ -118,7 +132,8 @@
                     const btn = document.createElement('a');
                     btn.href = `historial.html?nombre=${encodeURIComponent(nombreHistorial)}`;
                     btn.className = 'btn';
-                    btn.innerHTML = `📋 ${nombreHistorial}`;
+                    // Sanitizado con escapeHTML por seguridad (aunque venga del diccionario)
+                    btn.innerHTML = `📋 ${escapeHTML(nombreHistorial)}`;
                     contenedorBotones.appendChild(btn);
                 }
             });
@@ -162,13 +177,14 @@
                 ticketsActivos.forEach(t => {
                     const tid = t.ID || t.id; const tuser = t.Usuario || t.usuario || 'N/A'; const tprob = t.Problema || t.problema || '';
                     const test = t.Estado || t.estado || 'Pendiente'; const tmod = t.modalidad || t.Modalidad || 'Presencial';
-                    const linkReporte = `reporte.html?id=${tid}&user=${encodeURIComponent(tuser)}&status=${encodeURIComponent(test)}&nombre=${encodeURIComponent(t.bandejaPertenece)}&mod=${encodeURIComponent(tmod)}`;
+                    const linkReporte = `reporte.html?id=${encodeURIComponent(tid)}&user=${encodeURIComponent(tuser)}&status=${encodeURIComponent(test)}&nombre=${encodeURIComponent(t.bandejaPertenece)}&mod=${encodeURIComponent(tmod)}`;
 
+                    // Se aplica escapeHTML() a todos los campos inyectados dinámicamente en el DOM
                     tableBody.innerHTML += `<tr>
-                        <td data-label="Ticket"><b>#${tid}</b><br><span style="font-size:0.8em; color:#777;">${tuser}</span></td>
-                        <td data-label="Bandeja"><span class="badge-bandeja">${t.bandejaPertenece}</span></td>
-                        <td data-label="Problema">${tprob}</td>
-                        <td data-label="Estado"><span class="status-badge">${test}</span></td>
+                        <td data-label="Ticket"><b>#${escapeHTML(tid)}</b><br><span style="font-size:0.8em; color:#777;">${escapeHTML(tuser)}</span></td>
+                        <td data-label="Bandeja"><span class="badge-bandeja">${escapeHTML(t.bandejaPertenece)}</span></td>
+                        <td data-label="Problema">${escapeHTML(tprob)}</td>
+                        <td data-label="Estado"><span class="status-badge">${escapeHTML(test)}</span></td>
                         <td data-label="Acción"><a href="${linkReporte}" class="btn-resolver">Resolver</a></td>
                     </tr>`;
                 });
