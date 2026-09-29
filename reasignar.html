@@ -68,6 +68,19 @@
     </div>
 
     <script>
+        // =========================================================================
+        // Función utilitaria para neutralizar inyección de código XSS en el DOM
+        // =========================================================================
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         if (localStorage.getItem('userRole') === 'admin') { 
             document.getElementById('admin-back-btn').style.display = 'block'; 
         }
@@ -76,10 +89,11 @@
         const tId = params.get('id');
         const nombreActual = decodeURIComponent(params.get('nombreActual') || 'No asignado');
         
-        document.getElementById('ticket-id').innerText = tId || '---';
-        document.getElementById('tecnico-actual').innerText = nombreActual;
-        document.getElementById('user-name').innerText = decodeURIComponent(params.get('user') || '---');
-        document.getElementById('user-prob').innerText = decodeURIComponent(params.get('prob') || '---');
+        // Se aplica la Función Guardián y se asigna con innerHTML para inyección segura
+        document.getElementById('ticket-id').innerHTML = escapeHTML(tId || '---');
+        document.getElementById('tecnico-actual').innerHTML = escapeHTML(nombreActual);
+        document.getElementById('user-name').innerHTML = escapeHTML(decodeURIComponent(params.get('user') || '---'));
+        document.getElementById('user-prob').innerHTML = escapeHTML(decodeURIComponent(params.get('prob') || '---'));
 
         const scriptURL = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec';
 
@@ -133,12 +147,12 @@
                     body: JSON.stringify({
                         accion: "reasignar_ticket",
                         ticket: tId,
-                        tecnicoAnterior: nombreActual,
+                        tecnicoAnterior: nombreActual, // Valor original capturado al inicio
                         nombreNuevo: nombreNuevo,
                         idNuevo: idNuevo,
                         comentarios: comentariosAdmin,
-                        usuario: document.getElementById('user-name').innerText,
-                        problema: document.getElementById('user-prob').innerText
+                        usuario: document.getElementById('user-name').innerText, // Lee el texto seguro sin entidades
+                        problema: document.getElementById('user-prob').innerText // Lee el texto seguro sin entidades
                     })
                 });
 
