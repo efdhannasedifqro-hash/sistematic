@@ -32,6 +32,17 @@
     </div>
 
     <script>
+        // Función quirúrgica para neutralizar inyección de código XSS en el DOM
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         // Si ya hay sesión iniciada, saltar el login
         window.onload = function() {
             const role = localStorage.getItem('userRole');
@@ -60,9 +71,12 @@
 
                 if (data.valid) {
                     // Guardamos todas las credenciales, incluyendo el usuario corto para poder cambiar la contraseña luego
-                    localStorage.setItem('userLogin', u);
-                    localStorage.setItem('userRole', data.rol);
-                    localStorage.setItem('userName', data.nombre);
+                    // Aplicamos escapeHTML por seguridad antes de guardar en local storage
+                    localStorage.setItem('userLogin', escapeHTML(u));
+                    localStorage.setItem('userRole', escapeHTML(data.rol));
+                    localStorage.setItem('userName', escapeHTML(data.nombre));
+                    // No escapamos los accesos porque es un JSON que necesita parsearse después, 
+                    // la sanitización de esos datos deberá ocurrir al momento de imprimirlos en pantalla.
                     localStorage.setItem('userAccesos', JSON.stringify(data.accesos));
 
                     if (data.rol === 'admin') {
@@ -71,6 +85,8 @@
                         window.location.href = 'tecnico.html';
                     }
                 } else {
+                    // Si el servidor envía un mensaje de error específico, lo escapamos. Si no, usamos el por defecto.
+                    errorMsg.innerHTML = data.mensaje ? escapeHTML(data.mensaje) : "Usuario o contraseña incorrectos.";
                     errorMsg.style.display = 'block';
                     btn.disabled = false;
                     btn.innerText = "Ingresar al Sistema";
