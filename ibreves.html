@@ -87,6 +87,19 @@
     </div>
 
     <script>
+        // =========================================================================
+        // Función utilitaria para neutralizar inyección de código XSS en el DOM
+        // =========================================================================
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         const scriptURL = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec';
 
         // --- Configurar Panel de Regreso ---
@@ -129,8 +142,10 @@
                 
                 const areasList = Object.keys(catalogoGlobal).sort();
                 areasList.forEach(a => {
+                    // La inyección dinámica de los textos de la API es segura usando createElement y asignando .text
                     let option = document.createElement('option');
-                    option.value = a; option.text = a;
+                    option.value = a; 
+                    option.text = a;
                     selectArea.appendChild(option);
                 });
                 selectArea.innerHTML += '<option value="OTRO" style="font-weight:bold; color:#e67e22;">+ AGREGAR NUEVA ÁREA...</option>';
@@ -166,7 +181,8 @@
                     const usuariosArea = Object.keys(catalogoGlobal[areaSel]).sort();
                     usuariosArea.forEach(u => {
                         let option = document.createElement('option');
-                        option.value = u; option.text = u;
+                        option.value = u; 
+                        option.text = u; // Inyección segura nativa
                         selectU.appendChild(option);
                     });
                 }
