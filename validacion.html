@@ -34,6 +34,19 @@
     <div id="tickets-container"></div>
 
     <script>
+        // =========================================================================
+        // Función utilitaria para neutralizar inyección de código XSS en el DOM
+        // =========================================================================
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         const diccionarioTecnicos = {
             "1": "Gabriel Terrazas", "2": "Miguel Chavez", "3": "Eduardo Perez",
             "4": "Alejandro Reyes", "5": "Fati", "12": "Luis Carlos"
@@ -63,17 +76,18 @@
                     
                     const card = document.createElement('div');
                     card.className = 'card';
+                    // Aplicación de la Función Guardián para proteger la vista de inyección de código
                     card.innerHTML = `
                         <div class="card-header">
-                            <span class="ticket-id">#${ticket.id}</span>
-                            <span class="tech-name">${nombreTecnico}</span>
+                            <span class="ticket-id">#${escapeHTML(ticket.id)}</span>
+                            <span class="tech-name">${escapeHTML(nombreTecnico)}</span>
                         </div>
-                        <div class="info-row"><strong>Usuario:</strong> ${ticket.usuario}</div>
-                        <div class="info-row"><strong>Problema:</strong> ${ticket.problema}</div>
+                        <div class="info-row"><strong>Usuario:</strong> ${escapeHTML(ticket.usuario)}</div>
+                        <div class="info-row"><strong>Problema:</strong> ${escapeHTML(ticket.problema)}</div>
                         
                         <div class="solution-box">
                             <strong>Solución reportada:</strong><br>
-                            ${ticket.solucion}
+                            ${escapeHTML(ticket.solucion)}
                         </div>
 
                         <button class="btn-validate" onclick="aprobarTicket(this, '${urlMake}')">
