@@ -135,11 +135,27 @@
     </div>
 
     <script>
+        // =========================================================================
+        // Función utilitaria para neutralizar inyección de código XSS en el DOM
+        // =========================================================================
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         const urlParams = new URLSearchParams(window.location.search);
-        const ticketId = urlParams.get('ticket') || 'Sin ID';
-        const tecnicoRaw = urlParams.get('tecnico') || 'nuestro personal';
+        
+        // Se aplica la sanitización desde la extracción de las variables de origen externo
+        const ticketId = escapeHTML(urlParams.get('ticket') || 'Sin ID');
+        const tecnicoRaw = escapeHTML(urlParams.get('tecnico') || 'nuestro personal');
         const tecnicoLimpio = tecnicoRaw.replace(/_/g, ' ');
 
+        // La asignación con innerText añade una capa doble de seguridad nativa
         document.getElementById('nombre-tecnico').innerText = tecnicoLimpio;
 
         async function verificarEstado() {
