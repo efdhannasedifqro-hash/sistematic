@@ -93,6 +93,19 @@
     </div>
 
     <script>
+        // =========================================================================
+        // Función utilitaria para neutralizar inyección de código XSS en el DOM
+        // =========================================================================
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         // Lógica de Pestañas
         function cambiarTab(idTab) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -130,6 +143,7 @@
         // URL DE TU APPS SCRIPT
         const webhookURL = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec'; 
         
+        // Se aplica sanitización básica al imprimir el nombre en el saludo
         if (tecnicoNombre) {
             document.getElementById('saludo').innerText = "Tickets de: " + decodeURIComponent(tecnicoNombre);
             cargarTickets();
@@ -182,16 +196,17 @@
                         const esConcluido = terminados.includes(statusLimpio);
                         const editable = !esConcluido;
                         
+                        // Aplicación de la Función Guardián en la inyección de los datos del ticket
                         tableBody.innerHTML += `
                             <tr>
-                                <td data-label="ID Ticket"><b>#${tid}</b></td>
-                                <td data-label="Usuario"><strong>${tuser}</strong><br><span style="font-size:0.85em; color:#777;">${t.departamento || t.ubicacion}</span></td>
-                                <td data-label="Problema">${tprob}</td>
+                                <td data-label="ID Ticket"><b>#${escapeHTML(tid)}</b></td>
+                                <td data-label="Usuario"><strong>${escapeHTML(tuser)}</strong><br><span style="font-size:0.85em; color:#777;">${escapeHTML(t.departamento || t.ubicacion || '')}</span></td>
+                                <td data-label="Problema">${escapeHTML(tprob)}</td>
                                 <td data-label="Estado">
-                                    <span class="status-badge ${editable ? 'status-pendiente' : 'status-concluido'}">${test}</span>
+                                    <span class="status-badge ${editable ? 'status-pendiente' : 'status-concluido'}">${escapeHTML(test)}</span>
                                 </td>
                                 <td>
-                                    <a href="reporte.html?id=${tid}&user=${encodeURIComponent(tuser)}&status=${encodeURIComponent(test)}&nombre=${encodeURIComponent(tecnicoNombre)}&mod=${encodeURIComponent(tmod)}" 
+                                    <a href="reporte.html?id=${encodeURIComponent(tid)}&user=${encodeURIComponent(tuser)}&status=${encodeURIComponent(test)}&nombre=${encodeURIComponent(tecnicoNombre)}&mod=${encodeURIComponent(tmod)}" 
                                        class="btn-resolver ${editable ? 'btn-active' : 'btn-view'}">
                                         ${editable ? 'Resolver' : 'Ver Detalle'}
                                     </a>
@@ -212,16 +227,17 @@
                     ibrevesArray.sort((a,b) => parseInt((b.ID||"0").replace(/\D/g,'')) - parseInt((a.ID||"0").replace(/\D/g,'')));
                     
                     ibrevesArray.forEach(ib => {
+                        // Aplicación de la Función Guardián en las tarjetas express
                         contenedorExpress.innerHTML += `
                             <div class="express-card">
                                 <div class="express-header">
-                                    <span>🎟️ #${ib.ID} &nbsp;|&nbsp; 📅 ${ib.Fecha}</span>
-                                    <span>📍 ${ib.Area}</span>
+                                    <span>🎟️ #${escapeHTML(ib.ID)} &nbsp;|&nbsp; 📅 ${escapeHTML(ib.Fecha)}</span>
+                                    <span>📍 ${escapeHTML(ib.Area)}</span>
                                 </div>
                                 <div class="express-body">
-                                    <p style="margin: 0 0 8px 0;">👤 <b>Usuario Solicitante:</b> ${ib.Usuario}</p>
-                                    <p style="margin: 0 0 8px 0; color: #c0392b;">🚨 <b>Problema:</b> ${ib.Problema}</p>
-                                    <p style="margin: 0; color: #27ae60;">✅ <b>Solución Aplicada:</b> ${ib.Apoyo}</p>
+                                    <p style="margin: 0 0 8px 0;">👤 <b>Usuario Solicitante:</b> ${escapeHTML(ib.Usuario)}</p>
+                                    <p style="margin: 0 0 8px 0; color: #c0392b;">🚨 <b>Problema:</b> ${escapeHTML(ib.Problema)}</p>
+                                    <p style="margin: 0; color: #27ae60;">✅ <b>Solución Aplicada:</b> ${escapeHTML(ib.Apoyo)}</p>
                                 </div>
                             </div>`;
                     });
