@@ -72,6 +72,19 @@
     </div>
 
     <script>
+        // =========================================================================
+        // Función utilitaria para neutralizar inyección de código XSS en el DOM
+        // =========================================================================
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         if (localStorage.getItem('userRole') === 'admin') { 
             document.getElementById('admin-back-btn').style.display = 'block'; 
         }
@@ -79,10 +92,11 @@
         const params = new URLSearchParams(window.location.search);
         const tId = params.get('id');
         
-        document.getElementById('ticket-id').innerText = tId || '---';
-        document.getElementById('user-name').innerText = decodeURIComponent(params.get('user') || '---');
-        document.getElementById('user-loc').innerText = decodeURIComponent(params.get('loc') || '---');
-        document.getElementById('user-prob').innerText = decodeURIComponent(params.get('prob') || '---');
+        // Se aplica la Función Guardián y se asigna con innerHTML para inyección segura
+        document.getElementById('ticket-id').innerHTML = escapeHTML(tId || '---');
+        document.getElementById('user-name').innerHTML = escapeHTML(decodeURIComponent(params.get('user') || '---'));
+        document.getElementById('user-loc').innerHTML = escapeHTML(decodeURIComponent(params.get('loc') || '---'));
+        document.getElementById('user-prob').innerHTML = escapeHTML(decodeURIComponent(params.get('prob') || '---'));
 
         const scriptURL = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec';
 
@@ -108,9 +122,9 @@
                         nombreTecnico: nombreCompleto,
                         modalidad: document.getElementById('modalidad-final').value,
                         comentarios: document.getElementById('comentarios').value,
-                        usuario: document.getElementById('user-name').innerText,
-                        ubicacion: document.getElementById('user-loc').innerText,
-                        problema: document.getElementById('user-prob').innerText
+                        usuario: document.getElementById('user-name').innerText, // Lee el texto seguro sin entidades
+                        ubicacion: document.getElementById('user-loc').innerText, // Lee el texto seguro sin entidades
+                        problema: document.getElementById('user-prob').innerText // Lee el texto seguro sin entidades
                     })
                 });
 
