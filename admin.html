@@ -166,6 +166,19 @@
     </div>
 
     <script>
+        // =========================================================================
+        // Función utilitaria para neutralizar inyección de código XSS en el DOM
+        // =========================================================================
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         if(localStorage.getItem('userRole') !== 'admin') { window.location.href = "index.html"; }
         function logout() { if(confirm("¿Estás seguro de salir del panel?")) { localStorage.clear(); window.location.href = "index.html"; } }
 
@@ -213,8 +226,9 @@
                 } else {
                     let htmlTabla = "";
                     data.activos.forEach(t => {
-                        const nombreLimpio = diccionarioTecnicos[t.tecnico] || t.tecnico;
-                        htmlTabla += `<tr><td><b>#${t.id}</b></td><td style="color:#2980b9; font-weight:bold;">${nombreLimpio}</td><td>${t.usuario}</td><td><a href="reasignar.html?id=${t.id}&nombreActual=${encodeURIComponent(t.tecnico)}&user=${encodeURIComponent(t.usuario)}&prob=${encodeURIComponent(t.problema)}" class="btn-action btn-re">Reasignar</a></td></tr>`;
+                        const nombreLimpio = escapeHTML(diccionarioTecnicos[t.tecnico] || t.tecnico);
+                        // Se aplica escapeHTML a los valores que se inyectan como texto en las etiquetas <td>
+                        htmlTabla += `<tr><td><b>#${escapeHTML(t.id)}</b></td><td style="color:#2980b9; font-weight:bold;">${nombreLimpio}</td><td>${escapeHTML(t.usuario)}</td><td><a href="reasignar.html?id=${encodeURIComponent(t.id)}&nombreActual=${encodeURIComponent(t.tecnico)}&user=${encodeURIComponent(t.usuario)}&prob=${encodeURIComponent(t.problema)}" class="btn-action btn-re">Reasignar</a></td></tr>`;
                     });
                     body.innerHTML = htmlTabla;
                 }
@@ -229,7 +243,7 @@
                 if (data.prodIndividual) {
                     let arrayIndiv = Object.entries(data.prodIndividual).sort((a, b) => b[1].totalPuntos - a[1].totalPuntos);
                     if(arrayIndiv.length > 0) {
-                        mejorIndividual.nombre = arrayIndiv[0][0];
+                        mejorIndividual.nombre = escapeHTML(arrayIndiv[0][0]);
                         mejorIndividual.text = `<span class="score-tag">${arrayIndiv[0][1].totalPuntos} Pts</span> (${arrayIndiv[0][1].tickets} Normales, ${arrayIndiv[0][1].ibreves} Express)`;
                     }
                     arrayIndiv.forEach(item => {
@@ -242,7 +256,7 @@
                 if (data.prodParejas) {
                     let arrayParejas = Object.entries(data.prodParejas).sort((a, b) => b[1].totalPuntos - a[1].totalPuntos);
                     if(arrayParejas.length > 0) {
-                        mejorPareja.nombre = arrayParejas[0][0];
+                        mejorPareja.nombre = escapeHTML(arrayParejas[0][0]);
                         mejorPareja.text = `<span class="score-tag">${arrayParejas[0][1].totalPuntos} Pts</span> (${arrayParejas[0][1].tickets} tickets en conjunto)`;
                     }
                 }
@@ -294,14 +308,15 @@
                 listaTickets.forEach(r => {
                     let botonAccion = "---";
                     if (accionPrincipal === 'asignar') {
-                        botonAccion = `<a href="asignar.html?id=${r.id}&user=${encodeURIComponent(r.usuario)}&loc=${encodeURIComponent(r.loc)}&prob=${encodeURIComponent(r.prob)}" class="btn-action btn-asig">Asignar</a>`;
+                        botonAccion = `<a href="asignar.html?id=${encodeURIComponent(r.id)}&user=${encodeURIComponent(r.usuario)}&loc=${encodeURIComponent(r.loc)}&prob=${encodeURIComponent(r.prob)}" class="btn-action btn-asig">Asignar</a>`;
                     } else if (accionPrincipal === 'reasignar') {
-                        botonAccion = `<a href="reasignar.html?id=${r.id}&nombreActual=${encodeURIComponent(r.tecnico)}&user=${encodeURIComponent(r.usuario)}&prob=${encodeURIComponent(r.prob)}" class="btn-action btn-re">Reasignar</a>`;
+                        botonAccion = `<a href="reasignar.html?id=${encodeURIComponent(r.id)}&nombreActual=${encodeURIComponent(r.tecnico)}&user=${encodeURIComponent(r.usuario)}&prob=${encodeURIComponent(r.prob)}" class="btn-action btn-re">Reasignar</a>`;
                     } else if (accionPrincipal === 'validar') {
                         botonAccion = `<a href="validacion.html" class="btn-action btn-val">Ir a Validar</a>`;
                     }
 
-                    bodyModal.innerHTML += `<tr><td><b>#${r.id}</b></td><td>${r.usuario}</td><td>${r.tecnico}</td><td><span class="tag-dias">${r.dias} días</span></td><td>${botonAccion}</td></tr>`;
+                    // Se aplica escapeHTML a los textos que se imprimen en el HTML del modal
+                    bodyModal.innerHTML += `<tr><td><b>#${escapeHTML(r.id)}</b></td><td>${escapeHTML(r.usuario)}</td><td>${escapeHTML(r.tecnico)}</td><td><span class="tag-dias">${escapeHTML(r.dias)} días</span></td><td>${botonAccion}</td></tr>`;
                 });
             }
             document.getElementById('modalUniversal').style.display = "block";
