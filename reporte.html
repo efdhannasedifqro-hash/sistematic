@@ -48,13 +48,29 @@
     </div>
 
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const ticketId = urlParams.get('id') || 'N/A';
-        const nombreUser = decodeURIComponent(urlParams.get('user') || 'Usuario');
-        const estatus = decodeURIComponent(urlParams.get('status') || 'Sin atender');
-        const tecnico = decodeURIComponent(urlParams.get('nombre') || '');
-        const modalidad = decodeURIComponent(urlParams.get('mod') || 'No especificada');
+        // =========================================================================
+        // Función utilitaria para neutralizar inyección de código XSS en el DOM
+        // =========================================================================
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
 
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Se aplica escapeHTML a los parámetros de la URL decodificados
+        const ticketId = escapeHTML(urlParams.get('id') || 'N/A');
+        const nombreUser = escapeHTML(decodeURIComponent(urlParams.get('user') || 'Usuario'));
+        const estatus = escapeHTML(decodeURIComponent(urlParams.get('status') || 'Sin atender'));
+        const tecnico = escapeHTML(decodeURIComponent(urlParams.get('nombre') || ''));
+        const modalidad = escapeHTML(decodeURIComponent(urlParams.get('mod') || 'No especificada'));
+
+        // Se usa innerText para mayor seguridad nativa del navegador
         document.getElementById('disp-id').innerText = ticketId;
         document.getElementById('disp-usuario').innerText = nombreUser;
         document.getElementById('disp-status').innerText = estatus;
@@ -74,39 +90,39 @@
         function regresar() { window.location.href = `historial.html?nombre=${encodeURIComponent(tecnico)}`; }
 
         async function enviarReporte() {
-    const solucion = document.getElementById('solucion-texto').value;
-    const comentarios = document.getElementById('comentarios-tecnico').value;
-    if (!solucion) return alert("Por favor, describe la solución.");
+            const solucion = document.getElementById('solucion-texto').value;
+            const comentarios = document.getElementById('comentarios-tecnico').value;
+            
+            if (!solucion) return alert("Por favor, describe la solución.");
 
-    document.getElementById('status-msg').style.display = "block";
-    document.getElementById('status-msg').innerText = "Enviando reporte y notificando a jefe...";
+            document.getElementById('status-msg').style.display = "block";
+            document.getElementById('status-msg').innerText = "Enviando reporte y notificando a jefe...";
 
-    // URL de tu Apps Script (la misma que usas para el historial)
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec';
+            // URL de tu Apps Script (la misma que usas para el historial)
+            const scriptURL = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec';
 
-    try {
-        // Usamos mode: 'no-cors' para evitar bloqueos del navegador al enviar el POST
-        await fetch(scriptURL, {
-            method: 'POST',
-            mode: 'no-cors', 
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-    ticket: ticketId,
-    usuario: nombreUser, // Asegúrate de que esta variable tenga el nombre del usuario
-    solucion: solucion,
-    comentarios_tecnico: comentarios
-})
-        });
+            try {
+                // Usamos mode: 'no-cors' para evitar bloqueos del navegador al enviar el POST
+                await fetch(scriptURL, {
+                    method: 'POST',
+                    mode: 'no-cors', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ticket: ticketId,
+                        usuario: nombreUser, // Variable ya sanitizada y extraída al inicio
+                        solucion: solucion,
+                        comentarios_tecnico: comentarios
+                    })
+                });
 
-        // Como usamos 'no-cors', no podemos leer la respuesta, pero si no hay error asumimos éxito
-        document.getElementById('main-form').innerHTML = `<h2 style="color:var(--accent)">¡Reporte enviado!</h2><p>Se ha notificado al supervisor para su validación.</p><button class="btn-send" onclick="regresar()">Volver al Inicio</button>`;
-    } catch (error) { 
-        console.error(error);
-        alert("Error al enviar el reporte."); 
-    }
-}
+                // Como usamos 'no-cors', no podemos leer la respuesta, pero si no hay error asumimos éxito
+                // Aquí el mensaje de éxito es texto duro (harcoded), así que innerHTML es seguro
+                document.getElementById('main-form').innerHTML = `<h2 style="color:var(--accent)">¡Reporte enviado!</h2><p>Se ha notificado al supervisor para su validación.</p><button class="btn-send" onclick="regresar()">Volver al Inicio</button>`;
+            } catch (error) { 
+                console.error(error);
+                alert("Error al enviar el reporte."); 
+            }
+        }
     </script>
 </body>
 </html>
-
-
