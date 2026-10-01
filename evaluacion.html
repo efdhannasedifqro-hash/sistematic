@@ -158,13 +158,16 @@
         // La asignación con innerText añade una capa doble de seguridad nativa
         document.getElementById('nombre-tecnico').innerText = tecnicoLimpio;
 
+        // --- URL ÚNICA DE TU API EN APPS SCRIPT ---
+        const apiUrl = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec';
+
         async function verificarEstado() {
             document.getElementById('cargando').style.display = 'block';
             document.getElementById('form-container').style.display = 'none';
 
             try {
-                // Consulta al Webhook de Historial
-                const response = await fetch('https://hook.us2.make.com/g2o6bagpnddob1127nhxqpwc7t6sdadx?nombre=' + encodeURIComponent(tecnicoLimpio));
+                // Consulta nativa a tu Apps Script para verificar si el ticket está abierto
+                const response = await fetch(apiUrl + '?accion=buscar_revision&nombre=' + encodeURIComponent(tecnicoLimpio));
                 const texto = await response.text();
                 
                 // Limpieza de texto para búsqueda universal
@@ -216,9 +219,10 @@
             btn.disabled = true;
 
             try {
-                await fetch('https://hook.us2.make.com/fpndkbyluum7qzuh5l3z15s6xq9fli21', {
+                // Envío de datos nativo a Google Apps Script
+                await fetch(apiUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Ajuste para Apps Script CORS
                     body: JSON.stringify({
                         ticket: ticketId,
                         tecnico: tecnicoLimpio,
