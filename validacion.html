@@ -106,12 +106,12 @@
             }
         }
 
-        async function aprobarTicket(btn, urlNativa, usuario, tecnico, ticketId) {
+async function aprobarTicket(btn, urlNativa, usuario, tecnico, ticketId) {
             btn.disabled = true;
             btn.innerText = "Procesando...";
             
             try {
-                // Ejecuta la validación y obtiene los datos para armar el WhatsApp
+                // Ejecuta la validación y obtiene los datos
                 const response = await fetch(urlNativa);
                 const data = await response.json();
                 
@@ -120,8 +120,22 @@
                     btn.style.background = "#27ae60";
 
                     // Armar el mensaje de WhatsApp
-                    const mensajeWA = `Evaluación TIC SEDIF\n\nHola *${data.usuario}* tu ticket *${data.ticket}* ha sido concluido por *${data.tecnico}*. Ayúdanos a mejorar aquí:\n${data.link}`;
-                    const urlWhatsAppWeb = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensajeWA)}`;
+                    const mensajeWA = `Evaluación TIC SEDIF\n\nHola *${data.usuario}*, tu ticket *${data.ticket}* ha sido concluido por *${data.tecnico}*. Ayúdanos a mejorar aquí:\n${data.link}`;
+                    
+                    // Limpiar el teléfono y agregar el código de país (52 para México)
+                    let telefonoLimpio = (data.telefono || "").toString().replace(/\D/g, '');
+                    if (telefonoLimpio.length === 10) {
+                        telefonoLimpio = "52" + telefonoLimpio;
+                    }
+
+                    // Generar el enlace directo al chat de esa persona
+                    let urlWhatsAppWeb = "";
+                    if (telefonoLimpio.length >= 10) {
+                        urlWhatsAppWeb = `https://api.whatsapp.com/send?phone=${telefonoLimpio}&text=${encodeURIComponent(mensajeWA)}`;
+                    } else {
+                        // Si no dejó un teléfono válido de 10 dígitos, abre la ventana para que elijas el contacto manualmente
+                        urlWhatsAppWeb = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensajeWA)}`;
+                    }
 
                     // Abre la ventana para enviar el WhatsApp
                     window.open(urlWhatsAppWeb, '_blank');
