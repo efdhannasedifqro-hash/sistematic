@@ -8,14 +8,19 @@
     <style>
         :root { --primary: #2c3e50; --accent: #00ad9f; --bg: #f4f7f6; --text: #333; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: var(--text); }
+        
         .header { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid var(--accent); }
         h2 { margin: 0; color: var(--primary); }
+        
+        .controls { display: flex; gap: 15px; align-items: center; }
+        select { padding: 10px 15px; border-radius: 8px; border: 1px solid #ccc; font-weight: bold; color: var(--primary); outline: none; cursor: pointer; }
         .back-btn { background: var(--primary); color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 0.9em; }
         
         .kpi-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px; }
-        .kpi-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); text-align: center; }
+        .kpi-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); text-align: center; position: relative; overflow: hidden; }
+        .kpi-card::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--accent); }
         .kpi-card h3 { margin: 0; font-size: 1.1em; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; }
-        .kpi-card .value { font-size: 2.5em; font-weight: bold; color: var(--accent); margin: 10px 0; }
+        .kpi-card .value { font-size: 2.5em; font-weight: bold; color: var(--primary); margin: 10px 0; }
         .kpi-card .sub { font-size: 0.9em; color: #95a5a6; }
 
         .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
@@ -30,58 +35,99 @@
 
     <div class="header">
         <h2>📊 Inteligencia de Negocios TIC</h2>
-        <a href="admin.html" class="back-btn">← Volver al Panel</a>
+        <div class="controls">
+            <select id="filtroMes" onchange="cargarBI()">
+                <option value="global">🌎 Histórico Global</option>
+                <option value="0">Enero</option>
+                <option value="1">Febrero</option>
+                <option value="2">Marzo</option>
+                <option value="3">Abril</option>
+                <option value="4">Mayo</option>
+                <option value="5">Junio</option>
+                <option value="6">Julio</option>
+                <option value="7">Agosto</option>
+                <option value="8">Septiembre</option>
+                <option value="9">Octubre</option>
+                <option value="10">Noviembre</option>
+                <option value="11">Diciembre</option>
+            </select>
+            <a href="admin.html" class="back-btn">← Volver al Panel</a>
+        </div>
     </div>
 
-    <div id="loader">Extrayendo y calculando millones de bytes... ⏳</div>
+    <div id="loader">Extrayendo y calculando métricas... ⏳</div>
 
     <div id="dashboard" style="display: none;">
         <!-- Tarjetas de KPI -->
         <div class="kpi-container">
             <div class="kpi-card">
-                <h3>Volumen Histórico</h3>
+                <h3>Volumen Generado</h3>
                 <div class="value" id="kpi-total">0</div>
-                <div class="sub">Tickets & IBREVES</div>
+                <div class="sub">Tickets Oficiales & IBREVES</div>
             </div>
             <div class="kpi-card">
-                <h3>Promedio Resolución</h3>
+                <h3>Tiempos de Atención</h3>
                 <div class="value" id="kpi-sla">0</div>
-                <div class="sub">Días de SLA (Acuerdo de Nivel)</div>
+                <div class="sub">Días promedio de resolución</div>
             </div>
             <div class="kpi-card">
-                <h3>Satisfacción del Usuario</h3>
-                <div class="value" id="kpi-sat">0.0 / 5</div>
-                <div class="sub">Promedio General (Estrellas)</div>
+                <h3>Satisfacción General</h3>
+                <div class="value" id="kpi-sat">0.0</div>
+                <div class="sub">Promedio en encuestas (Base 5)</div>
             </div>
         </div>
 
         <!-- Grillas de Gráficos -->
         <div class="charts-grid">
             <div class="chart-box">
-                <h4>Demanda Anual por Mes</h4>
+                <h4>Carga de Trabajo por Técnico</h4>
+                <canvas id="chartProductividad"></canvas>
+            </div>
+            <div class="chart-box">
+                <h4>Calificación Promedio por Técnico</h4>
+                <canvas id="chartSatisfaccion"></canvas>
+            </div>
+            <div class="chart-box" id="cajaVolumen">
+                <h4>Demanda Mensual</h4>
                 <canvas id="chartVolumen"></canvas>
             </div>
             <div class="chart-box">
                 <h4>Top 5 Departamentos Demandantes</h4>
                 <canvas id="chartAreas"></canvas>
             </div>
-            <div class="chart-box">
-                <h4>Carga de Trabajo por Técnico</h4>
-                <canvas id="chartProductividad"></canvas>
-            </div>
-            <div class="chart-box">
-                <h4>Calificación Promedio por Técnico (Top)</h4>
-                <canvas id="chartSatisfaccion"></canvas>
-            </div>
         </div>
     </div>
 
     <script>
         const API_URL = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec';
+        
+        // Objeto global para almacenar y destruir las gráficas viejas
+        let misGraficas = {
+            volumen: null,
+            areas: null,
+            productividad: null,
+            satisfaccion: null
+        };
+
+        // Seleccionar automáticamente el mes actual al abrir la página
+        window.onload = () => {
+            if (localStorage.getItem('userRole') !== 'admin') {
+                document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px; color:red;'>Acceso Denegado</h2>";
+            } else {
+                const mesActual = new Date().getMonth();
+                document.getElementById('filtroMes').value = mesActual; // Descomenta si quieres iniciar en Global en lugar del mes actual
+                cargarBI();
+            }
+        };
 
         async function cargarBI() {
+            const mesSeleccionado = document.getElementById('filtroMes').value;
+            
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('loader').style.display = 'block';
+
             try {
-                const response = await fetch(`${API_URL}?accion=metricas_bi`);
+                const response = await fetch(`${API_URL}?accion=metricas_bi&mes=${mesSeleccionado}`);
                 const data = await response.json();
 
                 document.getElementById('loader').style.display = 'none';
@@ -90,7 +136,14 @@
                 // Llenar KPIs
                 document.getElementById('kpi-total').innerText = data.kpi.totalTickets;
                 document.getElementById('kpi-sla').innerText = data.kpi.promSLA;
-                document.getElementById('kpi-sat').innerText = data.kpi.promSatisfaccion + ' / 5';
+                document.getElementById('kpi-sat').innerText = data.kpi.promSatisfaccion + ' ⭐';
+
+                // Ocultar la gráfica de meses si ya estamos viendo un mes en específico
+                if (mesSeleccionado !== "global") {
+                    document.getElementById('cajaVolumen').style.display = 'none';
+                } else {
+                    document.getElementById('cajaVolumen').style.display = 'block';
+                }
 
                 renderCharts(data);
             } catch (error) {
@@ -101,8 +154,15 @@
         function renderCharts(data) {
             Chart.defaults.font.family = "'Segoe UI', sans-serif";
             
+            // Destruir gráficas previas para que no se empalmen los datos
+            if(misGraficas.volumen) misGraficas.volumen.destroy();
+            if(misGraficas.areas) misGraficas.areas.destroy();
+            if(misGraficas.productividad) misGraficas.productividad.destroy();
+            if(misGraficas.satisfaccion) misGraficas.satisfaccion.destroy();
+
             // 1. Gráfica de Líneas (Volumen Mensual)
-            new Chart(document.getElementById('chartVolumen'), {
+            const ctxVolumen = document.getElementById('chartVolumen').getContext('2d');
+            misGraficas.volumen = new Chart(ctxVolumen, {
                 type: 'line',
                 data: {
                     labels: Object.keys(data.volumenMes),
@@ -116,7 +176,8 @@
             });
 
             // 2. Gráfica de Pastel (Departamentos Top)
-            new Chart(document.getElementById('chartAreas'), {
+            const ctxAreas = document.getElementById('chartAreas').getContext('2d');
+            misGraficas.areas = new Chart(ctxAreas, {
                 type: 'doughnut',
                 data: {
                     labels: data.chartAreas.labels,
@@ -144,8 +205,9 @@
                 }
             }
 
-            // 3. Gráfica de Barras Apiladas (Carga de Trabajo Normal vs Express)
-            new Chart(document.getElementById('chartProductividad'), {
+            // 3. Gráfica de Barras Apiladas (Carga de Trabajo)
+            const ctxProd = document.getElementById('chartProductividad').getContext('2d');
+            misGraficas.productividad = new Chart(ctxProd, {
                 type: 'bar',
                 data: {
                     labels: labelsTecnicos,
@@ -158,25 +220,19 @@
             });
 
             // 4. Gráfica de Barras (Calificación por Técnico)
-            new Chart(document.getElementById('chartSatisfaccion'), {
+            const ctxSat = document.getElementById('chartSatisfaccion').getContext('2d');
+            misGraficas.satisfaccion = new Chart(ctxSat, {
                 type: 'bar',
                 data: {
                     labels: labelsTecnicos,
                     datasets: [{
-                        label: 'Estrellas (de 5)',
+                        label: 'Estrellas Promedio',
                         data: dataCalificaciones,
                         backgroundColor: '#27ae60'
                     }]
                 },
                 options: { scales: { y: { beginAtZero: true, max: 5 } } }
             });
-        }
-
-        // Proteger el acceso solo a Administradores
-        if (localStorage.getItem('userRole') !== 'admin') {
-            document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px; color:red;'>Acceso Denegado</h2>";
-        } else {
-            cargarBI();
         }
     </script>
 </body>
