@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validando Ticket...</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; color: #2c3e50; }
+        .loader { border: 5px solid #e2e8f0; border-top: 5px solid #00ad9f; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div>
+        <div class="loader"></div>
+        <h2>Validando Ticket y abriendo WhatsApp...</h2>
+        <p style="color: #7f8c8d;">Por favor espera un momento.</p>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const ticketId = urlParams.get('ticket');
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec';
+
+        async function procesarValidacion() {
+            if (!ticketId) {
+                document.body.innerHTML = "<h2 style='color:red;'>Error: No hay ticket</h2>";
+                return;
+            }
+
+            try {
+                // Llama a tu API de Google silenciosamente
+                const response = await fetch(`${API_URL}?accion=validar_ticket&ticket=${ticketId}`);
+                const data = await response.json();
+
+                if (data.result === "validated") {
+                    // Prepara el número
+                    let telefonoLimpio = (data.telefono || "").toString().replace(/\D/g, '');
+                    if (telefonoLimpio.length === 10) { telefonoLimpio = "52" + telefonoLimpio; }
+
+                    // Arma el mensaje
+                    const mensajeWA = `Evaluación TIC SEDIF\n\nHola *${data.usuario}*, tu ticket *${data.ticket}* ha sido concluido por *${data.tecnico}*. Ayúdanos a mejorar aquí:\n${data.link}`;
+                    
+                    let urlWhatsAppWeb = "";
+                    if (telefonoLimpio.length >= 10) {
+                        urlWhatsAppWeb = `https://api.whatsapp.com/send?phone=${telefonoLimpio}&text=${encodeURIComponent(mensajeWA)}`;
+                    } else {
+                        urlWhatsAppWeb = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensajeWA)}`;
+                    }
+
+                    // Redirige directamente a WhatsApp (esto reemplaza el comportamiento de Make)
+                    window.location.href = urlWhatsAppWeb;
+                } else {
+                    document.body.innerHTML = "<h2 style='color:#e74c3c;'>El ticket no se encontró o ya fue validado.</h2>";
+                }
+            } catch (error) {
+                document.body.innerHTML = "<h2 style='color:#e74c3c;'>Error de red. Intenta validarlo desde el panel.</h2>";
+            }
+        }
+
+        procesarValidacion();
+    </script>
+</body>
+</html>
