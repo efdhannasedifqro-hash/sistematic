@@ -44,7 +44,7 @@
             <textarea id="comentarios-tecnico" rows="2" placeholder="Notas internas..."></textarea>
             <button id="btn-finalizar" class="btn-send" onclick="enviarReporte()">Finalizar y Avisar a Jefe</button>
         </div>
-        <div id="status-msg" style="text-align:center; margin-top:15px; display:none;"></div>
+        <div id="status-msg" style="text-align:center; margin-top:15px; display:none; color: var(--accent); font-weight: bold;"></div>
     </div>
 
     <script>
@@ -87,40 +87,86 @@
             document.getElementById('formulario-contenido').appendChild(msg);
         }
 
-        function regresar() { window.location.href = `historial.html?nombre=${encodeURIComponent(tecnico)}`; }
+        function regresar() { 
+            // Validamos si es Admin, lo regresa al admin.html, de lo contrario al historial de su nombre
+            if (localStorage.getItem('userRole') === 'admin') {
+                window.location.href = "admin.html";
+            } else {
+                window.location.href = `historial.html?nombre=${encodeURIComponent(tecnico)}`; 
+            }
+        }
 
         async function enviarReporte() {
+            const btn = document.getElementById('btn-finalizar');
             const solucion = document.getElementById('solucion-texto').value;
             const comentarios = document.getElementById('comentarios-tecnico').value;
+            const statusMsg = document.getElementById('status-msg');
             
             if (!solucion) return alert("Por favor, describe la solución.");
 
-            document.getElementById('status-msg').style.display = "block";
-            document.getElementById('status-msg').innerText = "Enviando reporte y notificando a jefe...";
+            btn.disabled = true;
+            btn.innerText = "Procesando...";
+            statusMsg.style.display = "block";
+            statusMsg.innerText = "Guardando reporte...";
 
-            // URL de tu Apps Script (la misma que usas para el historial)
+            // URL de tu Apps Script
             const scriptURL = 'https://script.google.com/macros/s/AKfycbxZhLFw530NGYRXyvdJLoMw0Y40VijyHqW0dwnkEv6Id68GiB__W77WEPYoaliusost/exec';
 
             try {
-                // Usamos mode: 'no-cors' para evitar bloqueos del navegador al enviar el POST
-                await fetch(scriptURL, {
+                // Se removió mode: 'no-cors' para poder leer la respuesta JSON de la API
+                const response = await fetch(scriptURL, {
                     method: 'POST',
-                    mode: 'no-cors', 
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Ajuste clásico para Apps Script
                     body: JSON.stringify({
                         ticket: ticketId,
-                        usuario: nombreUser, // Variable ya sanitizada y extraída al inicio
+                        usuario: nombreUser, 
                         solucion: solucion,
                         comentarios_tecnico: comentarios
                     })
                 });
 
-                // Como usamos 'no-cors', no podemos leer la respuesta, pero si no hay error asumimos éxito
-                // Aquí el mensaje de éxito es texto duro (harcoded), así que innerHTML es seguro
-                document.getElementById('main-form').innerHTML = `<h2 style="color:var(--accent)">¡Reporte enviado!</h2><p>Se ha notificado al supervisor para su validación.</p><button class="btn-send" onclick="regresar()">Volver al Inicio</button>`;
+                const data = await response.json();
+
+                // === CASO 1: Auto-validación (Es el Jefe) ===
+                if (data.result === "auto_validated") {
+                    statusMsg.innerText = "Ticket auto-validado. Abriendo WhatsApp...";
+                    
+                    // Prepara el WhatsApp
+                    const mensajeWA = `Evaluación TIC SEDIF\n\nHola *${data.usuario}*, tu ticket *${data.ticket}* ha sido concluido por *${data.tecnico}*. Ayúdanos a mejorar aquí:\n${data.link}`;
+                    
+                    let telefonoLimpio = (data.telefono || "").toString().replace(/\D/g, '');
+                    if (telefonoLimpio.length === 10) { telefonoLimpio = "52" + telefonoLimpio; }
+
+                    let urlWhatsAppWeb = "";
+                    if (telefonoLimpio.length >= 10) {
+                        urlWhatsAppWeb = `https://api.whatsapp.com/send?phone=${telefonoLimpio}&text=${encodeURIComponent(mensajeWA)}`;
+                    } else {
+                        urlWhatsAppWeb = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensajeWA)}`;
+                    }
+
+                    // Abre la ventana de WhatsApp Web
+                    window.open(urlWhatsAppWeb, '_blank');
+                    
+                    document.getElementById('main-form').innerHTML = `<h2 style="color:var(--accent)">✅ ¡Concluido!</h2><p>El ticket se cerró y se abrió WhatsApp.</p><button class="btn-send" onclick="regresar()">Volver al Inicio</button>`;
+                } 
+                // === CASO 2: Envío normal a Revisión (Es un colaborador) ===
+                else if (data.result === "updated") {
+                    document.getElementById('main-form').innerHTML = `<h2 style="color:var(--accent)">¡Reporte enviado!</h2><p>Se ha notificado al supervisor para su validación.</p><button class="btn-send" onclick="regresar()">Volver al Inicio</button>`;
+                } 
+                // === CASO 3: Error de la API ===
+                else {
+                    alert("Ocurrió un error al intentar actualizar el ticket.");
+                    btn.disabled = false;
+                    btn.innerText = "Finalizar y Avisar a Jefe";
+                    statusMsg.style.display = "none";
+                }
+
             } catch (error) { 
                 console.error(error);
-                alert("Error al enviar el reporte."); 
+                alert("Error de red al enviar el reporte. Intenta de nuevo."); 
+                btn.disabled = false;
+                btn.innerText = "Finalizar y Avisar a Jefe";
+                statusMsg.style.display = "none";
             }
         }
     </script>
