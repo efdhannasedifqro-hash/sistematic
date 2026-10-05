@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -28,13 +29,17 @@
              data-callback="manejarRespuestaGoogle"
              data-auto_prompt="false">
         </div>
-        <div class="g_id_signin"
-             data-type="standard"
-             data-shape="rectangular"
-             data-theme="outline"
-             data-text="signin_with"
-             data-size="large"
-             data-logo_alignment="left">
+        
+        <!-- Contenedor Flex para centrar el botón perfectamente -->
+        <div id="btn-container" style="display: flex; justify-content: center; width: 100%;">
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-shape="rectangular"
+                 data-theme="outline"
+                 data-text="signin_with"
+                 data-size="large"
+                 data-logo_alignment="left">
+            </div>
         </div>
 
         <div id="loader">Validando credenciales... ⏳</div>
@@ -59,7 +64,7 @@
             const payload = decodificarJWT(response.credential);
             const userEmail = payload.email; // Aquí obtenemos su correo de forma segura
 
-            document.querySelector('.g_id_signin').style.display = 'none';
+            document.getElementById('btn-container').style.display = 'none';
             document.getElementById('loader').style.display = 'block';
             document.getElementById('error-msg').style.display = 'none';
 
@@ -92,7 +97,7 @@
 
         function mostrarError(mensaje) {
             document.getElementById('loader').style.display = 'none';
-            document.querySelector('.g_id_signin').style.display = 'block';
+            document.getElementById('btn-container').style.display = 'flex';
             const errorDiv = document.getElementById('error-msg');
             errorDiv.innerText = mensaje;
             errorDiv.style.display = 'block';
